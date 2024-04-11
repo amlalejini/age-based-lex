@@ -4,7 +4,6 @@ SGP_DIR := third-party/SignalGP/include
 PSB_DIR := third-party/psb-cpp/include
 CEREAL_DIR := third-party/Empirical/third-party/cereal/include
 
-# PROJECT := diagnostics
 PROJECT := prog_synth
 MAIN_CPP ?= source/${PROJECT}.cpp
 
