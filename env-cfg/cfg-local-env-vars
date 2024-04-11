@@ -1,1 +1,11 @@
-export CXX="g++-13"
+export CC=/opt/homebrew/bin/gcc-13
+export CXX=/opt/homebrew/bin/g++-13
+export CPP=/opt/homebrew/bin/cpp-13
+export LD=/opt/homebrew/bin/gcc-13
+
+alias c++=/opt/homebrew/bin/c++-13
+alias g++=/opt/homebrew/bin/g++-13
+alias gcc=/opt/homebrew/bin/gcc-13
+alias cpp=/opt/homebrew/bin/cpp-13
+alias ld=/opt/homebrew/bin/gcc-13
+alias cc=/opt/homebrew/bin/gcc-13
