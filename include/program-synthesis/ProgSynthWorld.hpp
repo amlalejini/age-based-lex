@@ -149,7 +149,9 @@ protected:
   emp::Signal<void(org_t&, size_t)> do_program_test_sig;           ///< Evaluates program on particular test on trigger
   emp::Signal<void(org_t&, size_t)> end_program_test_sig;          ///< Evaluates program output. Use *ONLY* for training cases.
 
-  emp::vector<std::function<double(size_t)>> nonperf_fit_funs; // Are folded into fit_fun_set along with training case results
+  emp::vector<
+    emp::vector< std::function<double(void)> >
+  > nonperf_fit_funs; // Are folded into fit_fun_set along with training case results
 
   emp::vector<
     emp::vector< std::function<double(void)> >
@@ -215,6 +217,7 @@ protected:
   void SetupEvaluation_DownSample();
 
   void SetupSelection_Lexicase();
+  void SetupSelection_AgeLexicase();
   void SetupSelection_Tournament();
   void SetupSelection_Truncation();
   void SetupSelection_None();
@@ -654,6 +657,7 @@ void ProgSynthWorld::SetupMutator() {
         rnd,
         org.GetGenome().GetProgram()
       );
+      org.GetGenome().IncAge(1);
       return mut_cnt;
     }
   );
@@ -1112,6 +1116,8 @@ void ProgSynthWorld::SetupSelection() {
 
   if (config.SELECTION() == "lexicase" ) {
     SetupSelection_Lexicase();
+  } else if (config.SELECTION() == "age-lexicase") {
+    SetupSelection_AgeLexicase();
   } else if (config.SELECTION() == "tournament" ) {
     SetupSelection_Tournament();
   } else if (config.SELECTION() == "truncation" ) {
@@ -1140,6 +1146,42 @@ void ProgSynthWorld::SetupSelection_Lexicase() {
   ) -> emp::vector<size_t>& {
     // Cast selector to lexicase selection
     auto& sel = *(selector.Cast<selection::LexicaseSelect>());
+    return sel(n, org_group, test_group);
+  };
+
+}
+
+void ProgSynthWorld::SetupSelection_AgeLexicase() {
+
+  // TODO - create set of age functions
+
+  nonperf_fit_funs.clear();
+  nonperf_fit_funs.resize(
+    config.POP_SIZE(),
+    emp::vector<std::function<double(void)>>(0)
+  );
+
+  for (size_t org_id = 0; org_id < config.POP_SIZE(); ++org_id) {
+    nonperf_fit_funs[org_id].emplace_back(
+      [this, org_id]() -> double {
+        return -1.0 * (double)GetOrg(org_id).GetGenome().GetAge();
+      }
+    );
+  }
+
+  selector = emp::NewPtr<selection::AgeLexicaseSelect>(
+    fit_fun_set,
+    nonperf_fit_funs,
+    *random_ptr
+  );
+
+  selection_fun = [this](
+    size_t n,
+    const emp::vector<size_t>& org_group,
+    const emp::vector<size_t>& test_group
+  ) -> emp::vector<size_t>& {
+    // Cast selector to lexicase selection
+    auto& sel = *(selector.Cast<selection::AgeLexicaseSelect>());
     return sel(n, org_group, test_group);
   };
 
