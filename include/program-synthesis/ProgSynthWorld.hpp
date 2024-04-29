@@ -203,6 +203,12 @@ protected:
 
   SelectedStatistics selection_stats; ///< Utility struct that manages selection statistics
 
+  size_t num_to_inject = 0; ///< How many new organisms to inject this generation?
+  size_t num_to_select = 0;
+
+  std::function<void(void)> calc_next_gen_sources;
+  std::function<void(void)> inject_orgs;
+
   // -- Internal functions --
   void Setup();
   void SetupProblem();
@@ -216,6 +222,12 @@ protected:
   void SetupVirtualHardware();
   void SetupInstructionLibrary();
   void SetupEventLibrary();
+  void SetupOrgInjection();
+
+  void SetupOrgInjection_None();
+  void SetupOrgInjection_Random();
+  void SetupOrgInjection_RecombineRandom();
+  void SetupOrgInjection_RecombineComplementary();
 
   void SetupEvaluation_Full();
   void SetupEvaluation_Cohort();
@@ -242,6 +254,7 @@ protected:
   void DoEvaluation();
   void DoSelection();
   void DoUpdate();
+  void DoInjections();
 
   void SnapshotConfig();
   void SnapshotSolution();
@@ -292,8 +305,11 @@ public:
 
 void ProgSynthWorld::RunStep() {
   emp_assert(world_configured);
+  calc_next_gen_sources(); // Compute num to select vs inject
+  emp_assert((num_to_select + num_to_inject) == config.POP_SIZE());
   DoEvaluation();
   DoSelection();
+  DoInjections();
   DoUpdate();
 }
 
@@ -409,10 +425,16 @@ void ProgSynthWorld::DoEvaluation() {
 void ProgSynthWorld::DoSelection() {
   // Run configured selection routine
   run_selection_routine();
-  emp_assert(selected_parent_ids.size() == config.POP_SIZE());
+  emp_assert(selected_parent_ids.size() + num_to_inject == config.POP_SIZE());
   // Each selected parent id reproduces
   for (size_t id : selected_parent_ids) {
     DoBirth(GetGenomeAt(id), id);
+  }
+}
+
+void ProgSynthWorld::DoInjections() {
+  if (num_to_inject > 0) {
+    inject_orgs();
   }
 }
 
@@ -514,6 +536,8 @@ void ProgSynthWorld::Setup() {
   SetupEvaluation();
   // Setup selection
   SetupSelection();
+  // Setup org injection mode
+  SetupOrgInjection();
   // Setup stopping condition
   SetupStoppingCondition();
   // Setup phylogeny tracking
@@ -1083,7 +1107,7 @@ void ProgSynthWorld::SetupSelection() {
 
   run_selection_routine = [this]() {
     // Resize parent ids to hold pop_size parents
-    selected_parent_ids.resize(config.POP_SIZE(), 0);
+    selected_parent_ids.resize(num_to_select, 0);
     emp_assert(test_groupings->GetNumGroups() == org_groupings->GetNumGroups());
     const size_t num_groups = org_groupings->GetNumGroups();
     // For each grouping, select a number of parents equal to group size
@@ -1091,7 +1115,16 @@ void ProgSynthWorld::SetupSelection() {
     for (size_t group_id = 0; group_id < num_groups; ++group_id) {
       auto& org_group = org_groupings->GetGroup(group_id);
       auto& test_group = test_groupings->GetGroup(group_id);
-      const size_t n = org_group.GetSize();
+      // Adjust to handle fact that might be selecting < pop size
+      emp_assert(num_to_select >= num_selected);
+      const size_t n = (num_selected + org_group.GetSize() > num_to_select) ?
+        num_to_select - num_selected :
+        org_group.GetSize();
+      if (n == 0 && num_selected == num_to_select) {
+        break;
+      } else if (n == 0) {
+        continue;
+      }
       auto& selected = selection_fun(
         n,
         org_group.GetMembers(),
@@ -1106,6 +1139,7 @@ void ProgSynthWorld::SetupSelection() {
       );
       num_selected += n;
     }
+    emp_assert(num_selected == num_to_select);
   };
 
   if (config.SELECTION() == "lexicase" ) {
@@ -1215,6 +1249,67 @@ void ProgSynthWorld::SetupSelection_Random() {
   // TODO - Random selection
   emp_assert(false);
 }
+
+void ProgSynthWorld::SetupOrgInjection() {
+  std::cout << "Configuring organism recombination mode: " << config.ORG_INJECTION_MODE() << std::endl;
+
+  // Functions to configure:
+  // - injectorgs
+  // - calc_next_gen_sources
+
+  if (config.ORG_INJECTION_MODE() == "none") {
+    SetupOrgInjection_None();
+  } else if (config.ORG_INJECTION_MODE() == "random") {
+    SetupOrgInjection_Random();
+  } else if (config.ORG_INJECTION_MODE() == "recombine-random") {
+    SetupOrgInjection_RecombineRandom();
+  } else {
+    std::cout << "Unknown ORG_INJECTION_MODE: " << config.ORG_INJECTION_MODE() << std::endl;
+    exit(-1);
+  }
+}
+
+void ProgSynthWorld::SetupOrgInjection_None() {
+  calc_next_gen_sources = [this]() {
+    num_to_inject = 0;
+    num_to_select = config.POP_SIZE();
+  };
+
+  inject_orgs = [this]() {
+    return;
+  };
+}
+
+void ProgSynthWorld::SetupOrgInjection_Random() {
+  // calc_next_gen_sources = [this]() {
+  //   num_to_inject = 0;
+  //   num_to_select = config.POP_SIZE();
+  // };
+
+  inject_orgs = [this]() {
+    for (size_t i = 0; i < num_to_inject; ++i) {
+      Inject(
+        {
+          sgp::cpu::lfunprg::GenRandLinearFunctionsProgram<hardware_t, TAG_SIZE>(
+            *random_ptr,
+            inst_lib,
+            {config.PRG_MIN_FUNC_CNT(), config.PRG_MAX_FUNC_CNT()},
+            FUNC_NUM_TAGS,
+            {config.PRG_MIN_FUNC_INST_CNT(), config.PRG_MAX_FUNC_INST_CNT()},
+            INST_TAG_CNT,
+            INST_ARG_CNT,
+            {config.PRG_INST_MIN_ARG_VAL(), config.PRG_INST_MAX_ARG_VAL()}
+          )
+        }
+      );
+    }
+  };
+}
+
+void ProgSynthWorld::SetupOrgInjection_RecombineRandom() {
+
+}
+
 
 void ProgSynthWorld::SetupStoppingCondition() {
   std::cout << "Configuring stopping condition" << std::endl;

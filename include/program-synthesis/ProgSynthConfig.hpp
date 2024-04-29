@@ -17,6 +17,11 @@ EMP_BUILD_CONFIG(ProgSynthConfig,
   VALUE(TOURNAMENT_SIZE, size_t, 4, "Tournament size for selection schemes that use tournaments"),
   VALUE(AGE_LEX_AGE_ORDER_LIMIT, size_t, 100, "Age functions must appear within this limit in the shuffled order of eval criteria."),
 
+  GROUP(ORG_INJECTION, "Org injection settings"),
+  VALUE(ORG_INJECTION_MODE, std::string, "none", "Should we inject new organisms every X generations?"),
+  VALUE(ORG_INJECTION_INTERVAL, size_t, 10, "How often should we inject organisms?"),
+  VALUE(ORG_INJECTION_COUNT, size_t, 50, "How many new organisms should we inject?"),
+
   GROUP(PSB_PROBLEM, "Problem-related settings"),
   VALUE(PROBLEM, std::string, "small-or-large", "Problem to solve"),
   VALUE(TESTING_SET_PATH, std::string, "testing.json", "Path to testing set (json)"),
