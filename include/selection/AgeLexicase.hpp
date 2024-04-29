@@ -124,7 +124,7 @@ public:
 emp::vector<size_t>& AgeLexicaseSelect::operator()(size_t n) {
   emp_assert(all_eval_criteria.size() > 0);
   const size_t num_candidates = all_eval_criteria.size();
-  const size_t num_funs = all_score_fun_ids.size();
+  // const size_t num_funs = all_score_fun_ids.size();
   // Use all candidates (fill out all candidate ids if doesn't match score fun set)
   if (all_candidate_ids.size() != num_candidates) {
     all_candidate_ids.resize(num_candidates, 0);

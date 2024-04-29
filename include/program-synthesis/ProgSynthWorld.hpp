@@ -40,6 +40,11 @@
 #include "ProgSynthTaxonInfo.hpp"
 
 // TODO - Allow for non-functional fitness functions to be used in lexicase selection
+// Features:
+// - Every K updates, inject N random individuals
+// - Configure age appearance limit in lexicase shuffle
+// - Recombination (every k updates, inject N individuals generated from recombination)
+// - Add extra data tracking
 
 namespace psynth {
 
@@ -663,16 +668,6 @@ void ProgSynthWorld::SetupMutator() {
   );
 }
 
-// void ProgSynthWorld::SetupNonPerformanceFitFuns() {
-
-//   nonperf_fit_funs.emplace_back(
-//     [this](size_t org_id) -> double {
-//       return 0.0;
-//     }
-//   )
-
-// }
-
 // TODO - if using age, add non-performance criteria to all test groupings
 void ProgSynthWorld::SetupEvaluation() {
   std::cout << "Configuring evaluation (mode: " << config.EVAL_MODE() << ")" << std::endl;
@@ -1081,7 +1076,6 @@ void ProgSynthWorld::SetupEvaluation_DownSample() {
   );
 }
 
-
 void ProgSynthWorld::SetupSelection() {
   std::cout << "Configuring parent selection routine" << std::endl;
   // TODO - Can I have different worlds share selection routine setups?
@@ -1153,14 +1147,13 @@ void ProgSynthWorld::SetupSelection_Lexicase() {
 
 void ProgSynthWorld::SetupSelection_AgeLexicase() {
 
-  // TODO - create set of age functions
-
   nonperf_fit_funs.clear();
   nonperf_fit_funs.resize(
     config.POP_SIZE(),
     emp::vector<std::function<double(void)>>(0)
   );
 
+  // Add genome age as a training case
   for (size_t org_id = 0; org_id < config.POP_SIZE(); ++org_id) {
     nonperf_fit_funs[org_id].emplace_back(
       [this, org_id]() -> double {
@@ -1174,6 +1167,9 @@ void ProgSynthWorld::SetupSelection_AgeLexicase() {
     nonperf_fit_funs,
     *random_ptr
   );
+
+  auto& sel = *(selector.Cast<selection::AgeLexicaseSelect>());
+  sel.SetAgeFunOrderLimit(config.AGE_LEX_AGE_ORDER_LIMIT());
 
   selection_fun = [this](
     size_t n,

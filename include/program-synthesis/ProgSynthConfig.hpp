@@ -15,6 +15,7 @@ EMP_BUILD_CONFIG(ProgSynthConfig,
   GROUP(SELECTION, "Selection settings"),
   VALUE(SELECTION, std::string, "tournament", "Selection scheme to use"),
   VALUE(TOURNAMENT_SIZE, size_t, 4, "Tournament size for selection schemes that use tournaments"),
+  VALUE(AGE_LEX_AGE_ORDER_LIMIT, size_t, 100, "Age functions must appear within this limit in the shuffled order of eval criteria."),
 
   GROUP(PSB_PROBLEM, "Problem-related settings"),
   VALUE(PROBLEM, std::string, "small-or-large", "Problem to solve"),
