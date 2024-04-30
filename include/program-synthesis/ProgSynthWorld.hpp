@@ -426,6 +426,7 @@ void ProgSynthWorld::DoSelection() {
   // Run configured selection routine
   run_selection_routine();
   emp_assert(selected_parent_ids.size() + num_to_inject == config.POP_SIZE());
+  // std::cout << "DoSelection(): " << selected_parent_ids.size() << std::endl;
   // Each selected parent id reproduces
   for (size_t id : selected_parent_ids) {
     DoBirth(GetGenomeAt(id), id);
@@ -433,6 +434,7 @@ void ProgSynthWorld::DoSelection() {
 }
 
 void ProgSynthWorld::DoInjections() {
+  // std::cout << "DoInjections(), num_to_inject: " << num_to_inject << std::endl;
   if (num_to_inject > 0) {
     inject_orgs();
   }
@@ -485,6 +487,7 @@ void ProgSynthWorld::DoUpdate() {
   if (print_interval) {
     std::cout << "update: " << GetUpdate() << "; ";
     std::cout << "best score (" << max_fit_id << "): " << max_fit;
+    std::cout << "; pop size: " << GetSize();
     std::cout << std::endl;
   }
 
@@ -1281,14 +1284,28 @@ void ProgSynthWorld::SetupOrgInjection_None() {
 }
 
 void ProgSynthWorld::SetupOrgInjection_Random() {
-  // calc_next_gen_sources = [this]() {
-  //   num_to_inject = 0;
-  //   num_to_select = config.POP_SIZE();
-  // };
+  calc_next_gen_sources = [this]() {
+    emp_assert(config.ORG_INJECTION_COUNT() < config.POP_SIZE());
+    // Default to 0 inject, select pop size
+    num_to_inject = 0;
+    num_to_select = config.POP_SIZE();
+    const size_t cur_update = GetUpdate();
+    // if update 0, don't perform injection
+    if (cur_update == 0) return;
+    const size_t interval = config.ORG_INJECTION_INTERVAL();
+    if ((cur_update % interval) == 0) {
+      num_to_inject = config.ORG_INJECTION_COUNT();
+      num_to_select = config.POP_SIZE() - num_to_inject;
+    }
+    emp_assert(num_to_inject + num_to_select == config.POP_SIZE());
+  };
 
-  inject_orgs = [this]() {
+   inject_orgs = [this]() {
+    // std::cout << "Num pops: " << pops.size() << std::endl;
     for (size_t i = 0; i < num_to_inject; ++i) {
-      Inject(
+      // Inject in 'next pop' at end of pop vector
+      // emp::WorldPosition inject_pos(pops[1].size(), 1);
+      InjectAt(
         {
           sgp::cpu::lfunprg::GenRandLinearFunctionsProgram<hardware_t, TAG_SIZE>(
             *random_ptr,
@@ -1300,14 +1317,32 @@ void ProgSynthWorld::SetupOrgInjection_Random() {
             INST_ARG_CNT,
             {config.PRG_INST_MIN_ARG_VAL(), config.PRG_INST_MAX_ARG_VAL()}
           )
-        }
+        },
+        {pops[1].size(), 1}
       );
     }
   };
 }
 
 void ProgSynthWorld::SetupOrgInjection_RecombineRandom() {
+  calc_next_gen_sources = [this]() {
+    emp_assert(config.ORG_INJECTION_COUNT() < config.POP_SIZE());
+    // Default to 0 inject, select pop size
+    num_to_inject = 0;
+    num_to_select = config.POP_SIZE();
+    const size_t cur_update = GetUpdate();
+    // if update 0, don't perform injection
+    if (cur_update == 0) return;
+    const size_t interval = config.ORG_INJECTION_INTERVAL();
+    if ((cur_update % interval) == 0) {
+      num_to_inject = config.ORG_INJECTION_COUNT();
+      num_to_select = config.POP_SIZE() - num_to_inject;
+    }
+  };
 
+  inject_orgs = [this]() {
+    // TODO
+  };
 }
 
 
