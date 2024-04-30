@@ -209,6 +209,9 @@ protected:
   std::function<void(void)> calc_next_gen_sources;
   std::function<void(void)> inject_orgs;
 
+  // emp::vector<size_t> recombine_sources; ///< IDs of orgs to recombine
+  // std::function<void(void)> identify_
+
   // -- Internal functions --
   void Setup();
   void SetupProblem();
@@ -1340,8 +1343,20 @@ void ProgSynthWorld::SetupOrgInjection_RecombineRandom() {
     }
   };
 
+  // Limit to selected?
+
+  // Or pure random?
+
   inject_orgs = [this]() {
-    // TODO
+    // https://stackoverflow.com/questions/2288171/how-to-get-2-random-different-elements-from-a-c-vector
+    size_t pop_id_1 = random_ptr->GetUInt(GetSize() - 1);
+    size_t pop_id_2 = random_ptr->GetUInt(GetSize());
+    if (pop_id_1 == pop_id_2) {
+      pop_id_2 = GetSize() - 1;
+    }
+
+    // Recombine!
+
   };
 }
 
