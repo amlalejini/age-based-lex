@@ -21,6 +21,7 @@ EMP_BUILD_CONFIG(ProgSynthConfig,
   VALUE(ORG_INJECTION_MODE, std::string, "none", "Should we inject new organisms every X generations?"),
   VALUE(ORG_INJECTION_INTERVAL, size_t, 10, "How often should we inject organisms?"),
   VALUE(ORG_INJECTION_COUNT, size_t, 50, "How many new organisms should we inject?"),
+  VALUE(RECOMB_PER_FUNC_SEQ_RECOMB_RATE, double, 0.0, "Per-function rate of recombining additional functions beyond the first"),
 
   GROUP(PSB_PROBLEM, "Problem-related settings"),
   VALUE(PROBLEM, std::string, "small-or-large", "Problem to solve"),

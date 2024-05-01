@@ -38,6 +38,7 @@
 #include "SelectedStatistics.hpp"
 #include "program_utils.hpp"
 #include "ProgSynthTaxonInfo.hpp"
+#include "RecombinerLinearFunctionsProgram.hpp"
 
 // TODO - Allow for non-functional fitness functions to be used in lexicase selection
 // Features:
@@ -108,6 +109,12 @@ public:
   using taxon_t = typename systematics_t::taxon_t;
 
   using config_t = ProgSynthConfig;
+
+  using recombiner_t = psynth::RecombinerLinearFunctionsProgram<
+    hardware_t,
+    tag_t,
+    inst_arg_t
+  >;
 
   static constexpr size_t TAG_SIZE = world_defs::TAG_SIZE;
   static constexpr size_t FUNC_NUM_TAGS = world_defs::FUNC_NUM_TAGS;
@@ -208,6 +215,7 @@ protected:
 
   std::function<void(void)> calc_next_gen_sources;
   std::function<void(void)> inject_orgs;
+  recombiner_t recombiner;
 
   // emp::vector<size_t> recombine_sources; ///< IDs of orgs to recombine
   // std::function<void(void)> identify_
@@ -1328,6 +1336,9 @@ void ProgSynthWorld::SetupOrgInjection_Random() {
 }
 
 void ProgSynthWorld::SetupOrgInjection_RecombineRandom() {
+  // Configure recombiner
+  recombiner.SetFuncSeqCrossoverRate(config.RECOMB_PER_FUNC_SEQ_RECOMB_RATE());
+
   calc_next_gen_sources = [this]() {
     emp_assert(config.ORG_INJECTION_COUNT() < config.POP_SIZE());
     // Default to 0 inject, select pop size
@@ -1349,13 +1360,30 @@ void ProgSynthWorld::SetupOrgInjection_RecombineRandom() {
 
   inject_orgs = [this]() {
     // https://stackoverflow.com/questions/2288171/how-to-get-2-random-different-elements-from-a-c-vector
-    size_t pop_id_1 = random_ptr->GetUInt(GetSize() - 1);
-    size_t pop_id_2 = random_ptr->GetUInt(GetSize());
-    if (pop_id_1 == pop_id_2) {
-      pop_id_2 = GetSize() - 1;
-    }
+    size_t num_injected = 0;
+    while (num_injected < num_to_inject) {
+      size_t pop_id_1 = random_ptr->GetUInt(GetSize() - 1);
+      size_t pop_id_2 = random_ptr->GetUInt(GetSize());
+      if (pop_id_1 == pop_id_2) {
+        pop_id_2 = GetSize() - 1;
+      }
+      // Make two new genomes to work with
+      genome_t genome_1(GetOrg(pop_id_1).GetGenome());
+      genome_t genome_2(GetOrg(pop_id_2).GetGenome());
+      // Recombine!
+      recombiner.ApplyFunctionSequenceRecombinationTwoPoint(
+        *random_ptr,
+        genome_1.GetProgram(),
+        genome_2.GetProgram()
+      );
 
-    // Recombine!
+      InjectAt(genome_1, {pops[1].size(), 1});
+      ++num_injected;
+      if (num_injected < num_to_inject) {
+        InjectAt(genome_2, {pops[1].size(), 1});
+        ++num_injected;
+      }
+    }
 
   };
 }

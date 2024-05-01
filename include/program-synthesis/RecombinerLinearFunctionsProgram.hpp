@@ -122,7 +122,7 @@ public:
     */
     emp_assert(program_1.GetSize() > 0);
     emp_assert(program_2.GetSize() > 0);
-    std::cout << "Apply two-point recombination" << std::endl;
+    // std::cout << "Apply two-point recombination" << std::endl;
     // Generate vectors of function ids to use for determining which functions crossover
     emp::vector<size_t> p1_func_ids(program_1.GetSize(), 0);
     std::iota(p1_func_ids.begin(), p1_func_ids.end(), 0);
@@ -141,17 +141,17 @@ public:
       // Get functions ids to be recombined
       const size_t p1_func_id = p1_func_ids[i];
       const size_t p2_func_id = p2_func_ids[i];
-      std::cout << "Recombine p1[" << p1_func_id << "] and " << "p2["<< p2_func_id << "]" << std::endl;
+      // std::cout << "Recombine p1[" << p1_func_id << "] and " << "p2["<< p2_func_id << "]" << std::endl;
       emp_assert(p1_func_id < program_1.GetSize());
       emp_assert(p2_func_id < program_2.GetSize());
       emp_assert(program_1[p1_func_id].GetSize() > 0);
       emp_assert(program_2[p2_func_id].GetSize() > 0);
       // Pick two points for p1
       const auto p1_crossover_points = FindTwoPoints(random, program_1[p1_func_id]);
-      std::cout << "  P1 crossover points: (" << p1_crossover_points.first << "," << p1_crossover_points.second << ")" << std::endl;
+      // std::cout << "  P1 crossover points: (" << p1_crossover_points.first << "," << p1_crossover_points.second << ")" << std::endl;
       // Pick two points for p2
       const auto p2_crossover_points = FindTwoPoints(random, program_2[p2_func_id]);
-      std::cout << "  P2 crossover points: (" << p2_crossover_points.first << "," << p2_crossover_points.second << ")" << std::endl;
+      // std::cout << "  P2 crossover points: (" << p2_crossover_points.first << "," << p2_crossover_points.second << ")" << std::endl;
       // Create new p1 function
       function_t new_p1_func(program_1[p1_func_id].GetTags());
       // - (1) Copy p1 0 to p1_crossover_points.first
