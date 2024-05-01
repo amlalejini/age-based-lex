@@ -59,20 +59,20 @@ public:
     per_func_seq_xover_rate = rate;
   }
 
-  void SequenceCrossoverTwoPoint(
-    emp::Random& random,
-    function_t& func_1,
-    function_t& func_2
-  ) {
-    // (1) Pick two random points in func_1
-    const auto func_1_points = FindTwoPoints(random, func_1);
-    // (2) Pick two random points in func_2
-    const auto func_2_points = FindTwoPoints(random, func_2);
-    // (3) Build new func_1
-    // TODO
-    // (4) Build new func_2
-    // TODO
-  }
+  // void SequenceCrossoverTwoPoint(
+  //   emp::Random& random,
+  //   function_t& func_1,
+  //   function_t& func_2
+  // ) {
+  //   // (1) Pick two random points in func_1
+  //   const auto func_1_points = FindTwoPoints(random, func_1);
+  //   // (2) Pick two random points in func_2
+  //   const auto func_2_points = FindTwoPoints(random, func_2);
+  //   // (3) Build new func_1
+  //   // TODO
+  //   // (4) Build new func_2
+  //   // TODO
+  // }
 
   void ApplyWholeFunctionRecombination(
     emp::Random& random,
@@ -211,23 +211,25 @@ public:
     size_t end = random.GetUInt(0, func_size);
     if (start > end) {
       std::swap(start, end);
-    } else if ((start == end) && (start == 0)) {
+    } else if ((start == end) && (start == 0) && func_size > 0) {
       // start and end both equal, set end to some percentage into function
-      const double percent = random.GetDouble(0, 1.0);
-      end = (size_t)(percent * (double)func_size);
+      // const double percent = random.GetDouble(0, 1.0);
+      // end = (size_t)(percent * (double)func_size);
+      ++end;
       emp_assert(end < func_size);
-    } else if ((start == end) && (start == (func_size - 1))) {
+    } else if ((start == end) && (start == (func_size - 1)) && func_size > 0) {
       // start and end both equal to end of function, move start up some percentage
-      const double percent = random.GetDouble(0, 1.0);
-      const size_t move_up = (size_t)(percent * (double)func_size);
-      emp_assert(move_up < func_size);
-      start -= move_up;
+      // const double percent = random.GetDouble(0, 1.0);
+      // const size_t move_up = (size_t)(percent * (double)func_size);
+      // emp_assert(move_up < func_size);
+      // start -= 1;
+      --start;
       emp_assert(start < end);
     } else if (start == end) {
       // start and end both equal and are both in the middle of the function
       start = 0;
     }
-    emp_assert(start < end);
+    emp_assert(start < end, start, end, func_size);
     emp_assert(end < func_size);
     return {start, end};
   }

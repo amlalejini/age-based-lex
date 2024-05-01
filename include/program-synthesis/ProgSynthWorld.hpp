@@ -16,6 +16,7 @@
 #include "emp/matching/MatchBin.hpp"
 #include "emp/base/Ptr.hpp"
 #include "emp/control/Signal.hpp"
+#include "emp/datastructs/set_utils.hpp"
 
 #include "sgp/cpu/lfunprg/LinearFunctionsProgram.hpp"
 #include "sgp/cpu/LinearFunctionsProgramCPU.hpp"
@@ -28,6 +29,7 @@
 #include "../utility/GroupManager.hpp"
 #include "../utility/printing.hpp"
 #include "../selection/SelectionSchemes.hpp"
+#include "../utility/pareto.hpp"
 
 #include "ProgSynthConfig.hpp"
 #include "ProgSynthOrg.hpp"
@@ -121,6 +123,20 @@ public:
   static constexpr size_t INST_TAG_CNT = world_defs::INST_TAG_CNT;
   static constexpr size_t INST_ARG_CNT = world_defs::INST_ARG_CNT;
 
+  struct PhenUnionInfo {
+    emp::BitVector phen_union;
+    std::pair<size_t, size_t> org_ids;
+    PhenUnionInfo(
+      size_t org_a_id,
+      const emp::BitVector& org_a_phen,
+      size_t org_b_id,
+      const emp::BitVector& org_b_phen
+    ) :
+      phen_union(org_a_phen.OR(org_b_phen)),
+      org_ids(org_a_id, org_b_id)
+    { ; }
+  };
+
 protected:
   const config_t& config;
 
@@ -183,6 +199,7 @@ protected:
   emp::vector<size_t> org_num_training_cases; ///< Per-organism number of training cases organism has been evaluated against
   emp::vector< emp::vector<double> > org_training_scores;    ///< Per-organism, scores for each training case
   emp::vector< emp::vector<bool> > org_training_evaluations; ///< Per-organism, evaluated on training case?
+  // emp::vector<emp::BitVector> org_training_passes;
 
   // std::unordered_set<size_t> performance_criteria_ids;
   std::unordered_set<size_t> nonperformance_criteria_ids;
@@ -216,6 +233,9 @@ protected:
   std::function<void(void)> calc_next_gen_sources;
   std::function<void(void)> inject_orgs;
   recombiner_t recombiner;
+  // emp::vector<std::pair<size_t, size_t>> complementary_phen_pairs;
+  emp::vector<size_t> complementary_pair_ids; // Ids meaningful only in context of inject_org function
+  emp::vector<size_t> front_pair_ids;
 
   // emp::vector<size_t> recombine_sources; ///< IDs of orgs to recombine
   // std::function<void(void)> identify_
@@ -271,6 +291,8 @@ protected:
   void SnapshotSolution();
   void SnapshotPhylogeny();
   void SnapshotPhyloGenotypes();
+
+  void FindParetoFrontPairs(const emp::vector< ProgSynthWorld::PhenUnionInfo >& phen_pairs);
 
 public:
 
@@ -342,6 +364,7 @@ void ProgSynthWorld::DoEvaluation() {
   emp_assert(org_aggregate_scores.size() == config.POP_SIZE());
   emp_assert(fit_fun_set.size() == config.POP_SIZE());
   emp_assert(org_training_scores.size() == config.POP_SIZE());
+  // emp_assert(org_training_passes.size() == config.POP_SIZE());
   emp_assert(org_training_coverage.size() == config.POP_SIZE());
   emp_assert(org_num_training_cases.size() == config.POP_SIZE());
 
@@ -740,6 +763,11 @@ void ProgSynthWorld::SetupEvaluation() {
     config.POP_SIZE(),
     emp::vector<double>(total_training_cases, 0.0)
   );
+  // org_training_passes.clear();
+  // org_training_passes.resize(
+  //   config.POP_SIZE(),
+  //   emp::BitVector(total_training_cases, false)
+  // );
   // Allocate space for tracking organism test evaluations
   org_training_evaluations.clear();
   org_training_evaluations.resize(
@@ -1277,6 +1305,8 @@ void ProgSynthWorld::SetupOrgInjection() {
     SetupOrgInjection_Random();
   } else if (config.ORG_INJECTION_MODE() == "recombine-random") {
     SetupOrgInjection_RecombineRandom();
+  } else if (config.ORG_INJECTION_MODE() == "recombine-complement") {
+    SetupOrgInjection_RecombineComplementary();
   } else {
     std::cout << "Unknown ORG_INJECTION_MODE: " << config.ORG_INJECTION_MODE() << std::endl;
     exit(-1);
@@ -1388,6 +1418,86 @@ void ProgSynthWorld::SetupOrgInjection_RecombineRandom() {
   };
 }
 
+void ProgSynthWorld::SetupOrgInjection_RecombineComplementary() {
+  // Configure recombiner
+  recombiner.SetFuncSeqCrossoverRate(config.RECOMB_PER_FUNC_SEQ_RECOMB_RATE());
+
+  calc_next_gen_sources = [this]() {
+    emp_assert(config.ORG_INJECTION_COUNT() < config.POP_SIZE());
+    // Default to 0 inject, select pop size
+    num_to_inject = 0;
+    num_to_select = config.POP_SIZE();
+    const size_t cur_update = GetUpdate();
+    // if update 0, don't perform injection
+    if (cur_update == 0) return;
+    const size_t interval = config.ORG_INJECTION_INTERVAL();
+    if ((cur_update % interval) == 0) {
+      num_to_inject = config.ORG_INJECTION_COUNT();
+      num_to_select = config.POP_SIZE() - num_to_inject;
+    }
+  };
+
+  // Limit to selected?
+
+  // Or pure random?
+
+  inject_orgs = [this]() {
+    // (1) Analyze population
+    emp::vector<PhenUnionInfo> phen_pairs;
+    std::unordered_set<emp::BitVector> unique_phen_unions;
+    // Union phenotypes of all possible pairings
+    for (size_t i = 0; i < GetSize(); ++i) {
+      for (size_t j = i+1; j < GetSize(); ++j) {
+        // TODO - optimize
+        emp::BitVector union_phen(GetOrg(i).GetPhenotype().GetTestPasses().OR(GetOrg(j).GetPhenotype().GetTestPasses()));
+        if (emp::Has(unique_phen_unions, union_phen)) {
+          continue;
+        }
+        phen_pairs.emplace_back(
+          i,
+          GetOrg(i).GetPhenotype().GetTestPasses(),
+          j,
+          GetOrg(j).GetPhenotype().GetTestPasses()
+        );
+        unique_phen_unions.emplace(union_phen);
+      }
+    }
+    // std::cout << "InjectOrgs" << std::endl;
+    // std::cout << "phen_pairs.size(): " << phen_pairs.size() << std::endl;
+    // TODO - filter phen_pairs to just unique unions?
+    FindParetoFrontPairs(phen_pairs);
+
+    // std::cout << "front ("<< front_pair_ids.size() << "): " << std::endl; // << front_pair_ids << std::endl;
+
+    emp_assert(front_pair_ids.size() > 0);
+    size_t num_injected = 0;
+    while (num_injected < num_to_inject) {
+      // Select random pairing on pareto front
+      const size_t front_id = random_ptr->GetUInt(front_pair_ids.size());
+      emp_assert(front_id < phen_pairs.size());
+      const size_t pop_id_1 = phen_pairs[front_id].org_ids.first;
+      const size_t pop_id_2 = phen_pairs[front_id].org_ids.second;
+
+      // Make two new genomes to work with
+      genome_t genome_1(GetOrg(pop_id_1).GetGenome());
+      genome_t genome_2(GetOrg(pop_id_2).GetGenome());
+      // Recombine!
+      recombiner.ApplyFunctionSequenceRecombinationTwoPoint(
+        *random_ptr,
+        genome_1.GetProgram(),
+        genome_2.GetProgram()
+      );
+
+      InjectAt(genome_1, {pops[1].size(), 1});
+      ++num_injected;
+      if (num_injected < num_to_inject) {
+        InjectAt(genome_2, {pops[1].size(), 1});
+        ++num_injected;
+      }
+    }
+
+  };
+}
 
 void ProgSynthWorld::SetupStoppingCondition() {
   std::cout << "Configuring stopping condition" << std::endl;
@@ -2106,6 +2216,51 @@ void ProgSynthWorld::RunMutationAnalysis() {
     }
 
   }
-
 }
+
+// Re-implementation of utils::find_pareto_front
+void ProgSynthWorld::FindParetoFrontPairs(const emp::vector< ProgSynthWorld::PhenUnionInfo >& phen_pairs) {
+
+    const size_t num_candidates = phen_pairs.size();
+
+
+    // emp::vector<size_t> all_candidates(num_candidates);
+    complementary_pair_ids.resize(num_candidates);
+    std::iota(
+      complementary_pair_ids.begin(),
+      complementary_pair_ids.end(),
+      0
+    );
+
+    // -- Find the pareto front --
+    // Initialize the front with the first candidate
+    front_pair_ids.clear();
+    auto& front = front_pair_ids;
+    // emp::vector<size_t> front({complementary_pair_ids[0]});
+    front.emplace_back(complementary_pair_ids[0]);
+
+    for (size_t pair_i = 1; pair_i < complementary_pair_ids.size(); ++pair_i) {
+      const size_t cur_pair_id = complementary_pair_ids[pair_i];
+      bool dominated = false; // tracks whether this candidate has been dominated by anything on the front
+      for (int front_i = 0; front_i < (int)front.size(); ++front_i) {
+        const size_t front_id = front[front_i];
+        // emp_assert(score_table[cur_candidate_id].size() == score_table[front_id].size());
+        emp_assert(phen_pairs[cur_pair_id].phen_union.GetSize() == phen_pairs[front_id].phen_union.GetSize());
+        // note, this could be made more efficient (by computing sharing domination comparisons)
+        if (utils::dominates(phen_pairs[cur_pair_id].phen_union, phen_pairs[front_id].phen_union)) {
+          // candidate dominates member of the front, remove member of the front
+          std::swap(front[front_i], front[front.size()-1]); // Put dominated member of the front in the back
+          front.pop_back(); // Remove dominated member of the front
+          --front_i; // need to look at this index again
+        } else if (utils::dominates( phen_pairs[front_id].phen_union, phen_pairs[cur_pair_id].phen_union)) {
+          dominated = true;
+          break;
+        }
+      }
+      if (!dominated) front.emplace_back(cur_pair_id);
+    }
+    // return front;
+  }
+
+
 }

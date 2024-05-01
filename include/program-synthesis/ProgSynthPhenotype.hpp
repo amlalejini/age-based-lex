@@ -15,7 +15,8 @@ public:
 protected:
 
   emp::vector<double> test_scores;   ///< Scores on tests.
-  emp::vector<bool> test_passes;     ///< Pass/fail on tests
+  // emp::vector<bool> test_passes;     ///< Pass/fail on tests
+  emp::BitVector test_passes;
   emp::vector<bool> test_evaluated;  ///< Whether a test has been evaluated.
 
   double aggregate_score = 0.0;
@@ -43,11 +44,12 @@ public:
     );
 
     test_passes.resize(num_tests);
-    std::fill(
-      test_passes.begin(),
-      test_passes.end(),
-      false
-    );
+    test_passes.Clear();
+    // std::fill(
+    //   test_passes.begin(),
+    //   test_passes.end(),
+    //   false
+    // );
   }
 
   void Update(size_t test_id, const TestResult& test_result, bool evaluated=true) {
@@ -102,6 +104,10 @@ public:
 
   const emp::vector<double>& GetTestScores() const {
     return test_scores;
+  }
+
+  const emp::BitVector& GetTestPasses() const {
+    return test_passes;
   }
 
 };
