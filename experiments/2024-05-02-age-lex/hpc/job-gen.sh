@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 REPLICATES=20
-EXP_SLUG=2024-05-02-age-lexicase
+EXP_SLUG=2024-05-02-age-lex
 ACCOUNT=devolab
 SEED_OFFSET=10000
 JOB_TIME=72:00:00
