@@ -1745,6 +1745,15 @@ void ProgSynthWorld::SetupDataCollection_Summary() {
     "training_coverage_loss",
     "(true) population training coverage - (true) parent training coverage"
   );
+  // Average genome age of selected
+  summary_file_ptr->AddFun<double>(
+    [this]() -> double {
+      emp_assert(selection_stats.parent_genome_ages.size() > 0);
+      return emp::Mean(selection_stats.parent_genome_ages);
+    },
+    "mean_age_selected"
+  );
+
   summary_file_ptr->PrintHeaderKeys();
 }
 
@@ -1765,6 +1774,14 @@ void ProgSynthWorld::SetupDataCollection_Elite() {
     max_fit_id,
     "elite_id",
     "Population ID of the elite organism"
+  );
+
+  elite_file_ptr->AddFun<size_t>(
+    [this]() -> size_t {
+      const auto& org = GetOrg(max_fit_id);
+      return org.GetGenome().GetAge();
+    },
+    "elite_age"
   );
 
   // True aggregate fitness

@@ -34,10 +34,7 @@ EMP_BUILD_CONFIG(ProgSynthConfig,
 
   GROUP(EVALUATION, "How are organisms evaluated?"),
   VALUE(EVAL_MODE, std::string, "full", "Evaluation mode. Options:\nfull\ncohort\ndown-sample"),
-  // VALUE(EVAL_FIT_EST_MODE, std::string, "none", "Fitness function estimation method. Options:\nnone\nancestor\nrelative"),
-  // VALUE(EVAL_MAX_PHYLO_SEARCH_DEPTH, int, -1, "Maximum phylogeny search depth when estimating fitness."),
   VALUE(EVAL_CPU_CYCLES_PER_TEST, size_t, 128, "Maximum number of CPU cycles programs are run for single test case."),
-  // VALUE(EVAL_ADJ_EST, bool, false, "Penalize estimates by distance?"),
   VALUE(NUM_COHORTS, size_t, 2, "How many cohorts should we divide the tests and organisms into?"),
   VALUE(TEST_DOWNSAMPLE_RATE, double, 0.5, "Proportion of training cases to down-sample each generation"),
 
