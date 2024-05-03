@@ -33,7 +33,6 @@ fixed_parameters = {
     "OUTPUT_SUMMARY_DATA_INTERVAL": "10",
     "PRINT_INTERVAL": "10",
     "SNAPSHOT_INTERVAL": "10000",
-    "EVAL_ADJ_EST": "0",
     "PRG_MAX_FUNC_INST_CNT": "128",
     "EVAL_CPU_CYCLES_PER_TEST": "128",
     "EVAL_MODE": "full",
