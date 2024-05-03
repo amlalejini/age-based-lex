@@ -1406,7 +1406,8 @@ void ProgSynthWorld::SetupOrgInjection_RecombineRandom() {
         genome_1.GetProgram(),
         genome_2.GetProgram()
       );
-
+      genome_1.SetAge(0);
+      genome_2.SetAge(0);
       InjectAt(genome_1, {pops[1].size(), 1});
       ++num_injected;
       if (num_injected < num_to_inject) {
@@ -1487,7 +1488,8 @@ void ProgSynthWorld::SetupOrgInjection_RecombineComplementary() {
         genome_1.GetProgram(),
         genome_2.GetProgram()
       );
-
+      genome_1.SetAge(0);
+      genome_2.SetAge(0);
       InjectAt(genome_1, {pops[1].size(), 1});
       ++num_injected;
       if (num_injected < num_to_inject) {
