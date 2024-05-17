@@ -1,0 +1,465 @@
+# Program synthesis experiments
+
+```{r}
+experiment_slug <- "2024-05-02-age-lex"
+
+working_directory <- paste0(
+  "experiments/",
+  experiment_slug,
+  "/analysis/"
+)
+
+if (exists("bookdown_wd_prefix")) {
+  working_directory <- paste0(
+    bookdown_wd_prefix,
+    working_directory
+  )
+}
+```
+
+## Dependencies
+
+```{r}
+library(tidyverse)
+library(cowplot)
+library(RColorBrewer)
+library(khroma)
+library(rstatix)
+library(knitr)
+library(kableExtra)
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+```
+
+```{r}
+print(version)
+```
+
+## Setup
+
+```{r}
+# Configure our default graphing theme
+theme_set(theme_cowplot())
+# Create a directory to store plots
+plot_directory <- paste0(working_directory, "plots/")
+dir.create(plot_directory, showWarnings=FALSE)
+```
+
+### Load summary data
+
+```{r}
+summary_data_loc <- paste0(working_directory, "data/aggregate.csv")
+summary_data <- read_csv(summary_data_loc)
+
+summary_data <- summary_data %>%
+  mutate(
+    PROBLEM = as.factor(PROBLEM),
+    SELECTION = as.factor(SELECTION),
+    EVAL_MODE = as.factor(EVAL_MODE),
+    NUM_COHORTS = as.factor(NUM_COHORTS),
+    TEST_DOWNSAMPLE_RATE = as.factor(TEST_DOWNSAMPLE_RATE),
+    AGE_LEX_AGE_ORDER_LIMIT = as.factor(AGE_LEX_AGE_ORDER_LIMIT),
+    RECOMB_PER_FUNC_SEQ_RECOMB_RATE = as.factor(RECOMB_PER_FUNC_SEQ_RECOMB_RATE),
+    ORG_INJECTION_COUNT = as.factor(ORG_INJECTION_COUNT),
+    ORG_INJECTION_MODE = factor(
+      ORG_INJECTION_MODE,
+      levels = c(
+        "none",
+        "random",
+        "recombine-random",
+        "recombine-complement"
+      )
+    ),
+    ORG_INJECTION_INTERVAL = as.factor(ORG_INJECTION_INTERVAL),
+    .keep = "all"
+  )
+
+solution_counts <- summary_data %>%
+  group_by(
+    PROBLEM,
+    SELECTION,
+    AGE_LEX_AGE_ORDER_LIMIT,
+    ORG_INJECTION_COUNT,
+    ORG_INJECTION_MODE,
+    ORG_INJECTION_INTERVAL
+  ) %>%
+  summarize(
+    solution_count = sum(found_solution == "1"),
+    replicates = n(),
+    no_solution_count = n() - sum(found_solution == "1"),
+    elite_from_injected = sum(elite_elite_age != update),
+    sol_from_injected = sum(elite_elite_age != update & found_solution == "1")
+  )
+# print(solution_counts, n=208)
+solution_table <- kable(solution_counts) %>%
+  kable_styling(latex_options = "striped", font_size = 25)
+save_kable(solution_table, paste0(plot_directory, "solution_counts_table.pdf"))
+solution_table
+```
+
+Solution by 8,000 updates?
+
+```{r}
+solution_counts_8k <- summary_data %>%
+  group_by(
+    PROBLEM,
+    SELECTION,
+    AGE_LEX_AGE_ORDER_LIMIT,
+    ORG_INJECTION_COUNT,
+    ORG_INJECTION_MODE,
+    ORG_INJECTION_INTERVAL
+  ) %>%
+  summarize(
+    solution_count = sum(found_solution == "1" & update <= 8000),
+    replicates = n(),
+    no_solution_count = n() - sum(found_solution == "1" & update <= 8000),
+    # elite_from_injected = sum(elite_elite_age != update),
+    sol_from_injected = sum((elite_elite_age != update) & (found_solution == "1" & update <= 8000))
+  )
+# print(solution_counts, n=208)
+solution_table_8k <- kable(solution_counts_8k) %>%
+  kable_styling(latex_options = "striped", font_size = 25)
+save_kable(solution_table_8k, paste0(plot_directory, "solution_counts_table_8k.pdf"))
+```
+
+
+### Success rates across injection intervals
+
+5k
+
+```{r}
+no_inject_sol <- solution_counts_8k %>%
+  filter(ORG_INJECTION_MODE == "none") %>%
+  ungroup() %>%
+  select(!ORG_INJECTION_MODE)
+
+
+plot <- solution_counts_8k %>%
+  filter(ORG_INJECTION_MODE != "none") %>%
+  ggplot(
+    aes(
+      x = ORG_INJECTION_INTERVAL,
+      y = solution_count,
+      fill = ORG_INJECTION_INTERVAL
+    )
+  ) +
+  geom_col() +
+  geom_text(
+    aes(y = -0.5, label = solution_count)
+  ) +
+  geom_hline(
+    data = no_inject_sol,
+    aes(yintercept = solution_count),
+    linetype = "dashed"
+  ) +
+  scale_fill_bright() +
+  scale_color_bright() +
+  scale_x_discrete(
+    name = "Injection Interval"
+  ) +
+  scale_y_continuous(
+    "Solution count"
+  ) +
+  facet_grid(
+    ORG_INJECTION_MODE ~ PROBLEM
+  ) +
+  theme(
+      legend.position = "none",
+      axis.text.x = element_text(
+        angle = 30,
+        hjust = 1
+      ),
+      panel.border = element_rect(color = "gray", size = 2)
+    )
+ggsave(
+  filename = paste0(plot_directory, "solutions-bar-8k.pdf"),
+  plot = plot,
+  width = 15,
+  height = 10
+)
+```
+
+### Injection modes at interval 100
+
+```{r}
+plot <- solution_counts_8k %>%
+  # filter(ORG_INJECTION_INTERVAL == "200" | ORG_INJECTION_MODE == "none") %>%
+  # filter(ORG_INJECTION_MODE == "none") %>%
+  ggplot(
+    aes(
+      x = ORG_INJECTION_MODE,
+      y = solution_count,
+      fill = ORG_INJECTION_MODE
+    )
+  ) +
+  geom_col() +
+  geom_text(
+    aes(y = -0.5, label = solution_count)
+  ) +
+  # geom_hline(
+  #   data = no_inject_sol,
+  #   aes(yintercept = solution_count),
+  #   linetype = "dashed"
+  # ) +
+  scale_fill_light() +
+  scale_color_light() +
+  scale_x_discrete(
+    name = "Injection Mode",
+    breaks = c("none", "random", "recombine-random", "recombine-complement"),
+    labels = c("None", "Rand", "Recomb-Rand", "Recomb-Comp")
+  ) +
+  scale_y_continuous(
+    "Solution count"
+  ) +
+  facet_grid(
+    ORG_INJECTION_INTERVAL ~ PROBLEM
+    # nrow = 3
+  ) +
+  theme(
+      legend.position = "none",
+      axis.text.x = element_text(
+        angle = 30,
+        hjust = 1
+      ),
+      panel.border = element_rect(color = "gray", size = 2)
+    )
+ggsave(
+  filename = paste0(plot_directory, "solutions-interalall-8k.pdf"),
+  plot = plot,
+  width = 15,
+  height = 5
+)
+```
+
+#### Statistics
+
+```{r}
+sol_stats_data <- solution_counts_8k %>%
+  filter(ORG_INJECTION_INTERVAL == "100" | ORG_INJECTION_MODE == "none") %>%
+  ungroup() %>%
+  select(
+    PROBLEM, ORG_INJECTION_MODE, solution_count, no_solution_count
+  )
+```
+
+```{r}
+fisher_results <- data.frame(
+  comparison = character(),
+  group1 = character(),
+  group2 = character(),
+  n = integer(),
+  p = double(),
+  p.adj = double(),
+  p.adj.signif = character()
+)
+
+problems <- levels(sol_stats_data$PROBLEM)
+for (problem in problems) {
+
+  ft_results <- sol_stats_data %>%
+    filter(PROBLEM == problem) %>%
+    select(!PROBLEM) %>%
+    column_to_rownames(var = "ORG_INJECTION_MODE") %>%
+    pairwise_fisher_test(
+      p.adjust.method = "holm"
+    ) %>%
+    add_significance("p.adj")
+
+  ft_results <- ft_results %>%
+    mutate(
+      comparison = rep(problem, nrow(ft_results)),
+      .keep = "all"
+    ) %>%
+    relocate(comparison)
+
+  fisher_results <- rbind(
+    fisher_results,
+    ft_results
+  )
+}
+fisher_results <- as.tibble(fisher_results)
+fisher_results <- fisher_results %>%
+  mutate(
+    comparison = as.factor(comparison),
+    group1 = as.factor(group1),
+    group2 = as.factor(group2),
+  ) %>%
+  group_by(
+    comparison
+  )
+
+fisher_table <- kbl(fisher_results) %>% kable_styling()
+save_kable(fisher_table, paste0(plot_directory, "stats_table_int100_8k.pdf"))
+fisher_table
+```
+
+### Elite from original population or injected
+
+Solutions from injected
+
+```{r}
+# summary_data %>%
+#   pivot_longer(
+#     cols =
+#   )
+
+plot <- solution_counts_8k %>%
+  filter(ORG_INJECTION_INTERVAL == "100" | ORG_INJECTION_MODE == "none") %>%
+  ggplot(
+    aes(
+      x = ORG_INJECTION_MODE,
+      y = sol_from_injected,
+      fill = ORG_INJECTION_MODE
+    )
+  ) +
+  geom_col(aes(y = solution_count), fill = "grey", alpha = 0.8) +
+  geom_col() +
+  geom_text(
+    data = filter(solution_counts_8k, (ORG_INJECTION_INTERVAL == "100" | ORG_INJECTION_MODE == "none") & solution_count > 0),
+    aes(
+      # y = sol_from_injected,
+      y = -0.5,
+      label = round(sol_from_injected / solution_count, 2)
+    )
+    # vjust = 1.2
+  ) +
+  scale_fill_light() +
+  scale_color_light() +
+  scale_x_discrete(
+    name = "Injection Mode",
+    breaks = c("none", "random", "recombine-random", "recombine-complement"),
+    labels = c("None", "Rand", "Recomb-Rand", "Recomb-Comp")
+  ) +
+  scale_y_continuous(
+    "Solution count"
+  ) +
+  facet_wrap(
+    ~ PROBLEM,
+    nrow = 1
+  ) +
+  theme(
+      legend.position = "none",
+      axis.text.x = element_text(
+        angle = 30,
+        hjust = 1
+      ),
+      panel.border = element_rect(color = "gray", size = 2)
+    )
+ggsave(
+  filename = paste0(plot_directory, "sol-from-inject-interal100-8k.pdf"),
+  plot = plot,
+  width = 15,
+  height = 5
+)
+```
+
+### Elite age
+
+Note this is not a particularly meaningful plot because solutions (that stop early) are mixed in.
+Not sure if elite age is driven by solution stop or because solution's lineage age.
+
+```{r}
+# elite_age
+plot <- summary_data %>%
+  filter(
+    SELECTION == "age-lexicase" & ORG_INJECTION_INTERVAL == "100"
+  ) %>%
+  ggplot(
+    aes(
+      x = ORG_INJECTION_MODE,
+      y = elite_elite_age / update,
+      fill = ORG_INJECTION_MODE
+    )
+  ) +
+  # geom_flat_violin(
+  #   position = position_nudge(x = .2, y = 0),
+  #   alpha = .8,
+  #   adjust = 1.5
+  # ) +
+  geom_point(
+    mapping = aes(color = ORG_INJECTION_MODE),
+    position = position_jitter(width = .2),
+    size = .5,
+    alpha = 0.8
+  ) +
+  geom_boxplot(
+    width = .2,
+    outlier.shape = NA,
+    alpha = 0.5
+  ) +
+  scale_y_continuous(
+    name = "Elite age (as % of total generations)"
+  ) +
+  scale_x_discrete(
+    name = "Injection Mode",
+    breaks = c("none", "random", "recombine-random", "recombine-complement"),
+    labels = c("None", "Rand", "Recomb-Rand", "Recomb-Comp")
+  ) +
+  scale_fill_bright() +
+  scale_color_bright() +
+  facet_wrap(
+    ~PROBLEM,
+    nrow = 1
+    # ncol = 1
+  ) +
+  # coord_flip() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(
+      angle = 30,
+      hjust = 1
+    ),
+    panel.border = element_rect(color = "gray", size = 2)
+  )
+ggsave(
+  filename = paste0(plot_directory, "elite-age.pdf"),
+  plot = plot,
+  width = 15,
+  height = 5
+)
+```
+
+Statistics
+
+We run a Kruskal-Wallis test to check for any differences in distributions.
+
+```{r}
+focal_data <- summary_data %>%
+  filter(
+    SELECTION == "age-lexicase" & ORG_INJECTION_INTERVAL == "100"
+  ) %>%
+  mutate(
+    age_proportion = elite_elite_age / update
+  )
+
+
+kw_test <- focal_data %>%
+  group_by(SELECTION, PROBLEM) %>%
+  kruskal_test(age_proportion ~ ORG_INJECTION_MODE) %>%
+  mutate(sig = (p < 0.05))
+  # unite(
+  #   "comparison_group",
+  #   SELECTION,
+  #   evals_per_gen,
+  #   sep = "_",
+  #   remove = FALSE
+  # )
+kable(kw_test)
+```
+
+```{r}
+# # Grab group names of significant comparisons
+sig_kw_groups <- filter(kw_test, p < 0.05)$PROBLEM
+
+wrs_test <- focal_data %>%
+  filter(
+    PROBLEM %in% sig_kw_groups
+  ) %>%
+  group_by(SELECTION, PROBLEM) %>%
+  pairwise_wilcox_test(age_proportion ~ ORG_INJECTION_MODE) %>%
+  adjust_pvalue(method = "holm") %>%
+  add_significance("p.adj")
+wrs_table <- kbl(wrs_test) %>% kable_styling()
+save_kable(wrs_table, paste0(plot_directory, "age_stats_table.pdf"))
+
+# kable(wrs_test)
+```
