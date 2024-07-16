@@ -1,0 +1,44 @@
+---
+title: "Supplemental Material for 'Using lineage age to augment search space exploration in lexicase selection'"
+author: "Karen Suzue, Charles Ofria, and Alexander Lalejini"
+date: "`r Sys.Date()`"
+output: bookdown::gitbook
+documentclass: book
+bibliography: ["packages.bib", "supplemental.bib"]
+biblio-style: apalike
+nocite: '@*'
+link-citations: yes
+github-repo: amlalejini/age-based-lex
+description: "Supplemental material"
+---
+
+```{r, include=FALSE}
+library(knitr)
+bookdown_wd_prefix <- "../"
+opts_chunk$set(
+  tidy.opts = list(width.cutoff = 60),
+  tidy=TRUE
+)
+```
+
+# Introduction
+
+This is not intended as a stand-alone document, but as a companion to our manuscript.
+
+## About our supplemental material
+
+As you may have noticed (unless you're reading a pdf version of this), our supplemental material is hosted using [GitHub pages](https://pages.github.com/).
+We compiled our data analyses and supplemental documentation into this nifty web-accessible book using [bookdown](https://bookdown.org).
+
+The source code/configuration files for this supplemental material can be found in [this GitHub repository](https://github.com/amlalejini/age-based-lex).
+
+Our supplemental material includes the following:
+
+- GP instruction set (Section \@ref(signalgp-instruction-set))
+- GP data analysis + statistics (Section \@ref(program-synthesis-experiments))
+
+## Contributing authors
+
+- Karen Suzue
+- Charles Ofria
+- Alexander Lalejini
