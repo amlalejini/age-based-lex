@@ -17,7 +17,7 @@ library(knitr)
 bookdown_wd_prefix <- "../"
 opts_chunk$set(
   tidy.opts = list(width.cutoff = 60),
-  tidy=TRUE
+  tidy = TRUE
 )
 ```
 
