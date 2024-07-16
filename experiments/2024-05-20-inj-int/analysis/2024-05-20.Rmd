@@ -1,0 +1,361 @@
+# Program synthesis experiments
+
+```{r}
+experiment_slug <- "2024-05-20-inj-int"
+
+working_directory <- paste0(
+  "experiments/",
+  experiment_slug,
+  "/analysis/"
+)
+
+if (exists("bookdown_wd_prefix")) {
+  working_directory <- paste0(
+    bookdown_wd_prefix,
+    working_directory
+  )
+}
+```
+
+## Dependencies
+
+```{r}
+library(tidyverse)
+library(cowplot)
+library(RColorBrewer)
+library(khroma)
+library(rstatix)
+library(knitr)
+library(kableExtra)
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+library(ggpattern)
+```
+
+```{r}
+print(version)
+```
+
+## Setup
+
+```{r}
+# Configure our default graphing theme
+theme_set(theme_cowplot())
+# Create a directory to store plots
+plot_directory <- paste0(working_directory, "plots/")
+dir.create(plot_directory, showWarnings=FALSE)
+```
+
+### Load summary data
+
+```{r}
+summary_data_loc <- paste0(working_directory, "data/aggregate.csv")
+summary_data <- read_csv(summary_data_loc)
+
+summary_data <- summary_data %>%
+  mutate(
+    PROBLEM = as.factor(PROBLEM),
+    SELECTION = as.factor(SELECTION),
+    EVAL_MODE = as.factor(EVAL_MODE),
+    NUM_COHORTS = as.factor(NUM_COHORTS),
+    TEST_DOWNSAMPLE_RATE = as.factor(TEST_DOWNSAMPLE_RATE),
+    AGE_LEX_AGE_ORDER_LIMIT = as.factor(AGE_LEX_AGE_ORDER_LIMIT),
+    RECOMB_PER_FUNC_SEQ_RECOMB_RATE = as.factor(RECOMB_PER_FUNC_SEQ_RECOMB_RATE),
+    ORG_INJECTION_COUNT = as.factor(ORG_INJECTION_COUNT),
+    ORG_INJECTION_MODE = factor(
+      ORG_INJECTION_MODE,
+      levels = c(
+        "none",
+        "random",
+        "recombine-random",
+        "recombine-complement"
+      )
+    ),
+    inject_cond = str_c(SELECTION, ORG_INJECTION_MODE, sep = "_"),
+    ORG_INJECTION_INTERVAL = as.factor(ORG_INJECTION_INTERVAL),
+    .keep = "all"
+  ) %>%
+  mutate(
+    inject_cond = factor(
+      inject_cond,
+      levels = c(
+        "age-lexicase_random",
+        "lexicase_random",
+        "lexicase_none"
+      ),
+      labels = c(
+        "age-lex_inj-rand",
+        "lex_inj-rand",
+        "lex_inj-none"
+      )
+    )
+  )
+
+solution_counts <- summary_data %>%
+  group_by(
+    PROBLEM,
+    SELECTION,
+    AGE_LEX_AGE_ORDER_LIMIT,
+    ORG_INJECTION_COUNT,
+    ORG_INJECTION_MODE,
+    ORG_INJECTION_INTERVAL,
+    inject_cond
+  ) %>%
+  summarize(
+    solution_count = sum(found_solution == "1"),
+    replicates = n(),
+    no_solution_count = n() - sum(found_solution == "1"),
+    elite_from_injected = sum(elite_elite_age != update),
+    sol_from_injected = sum(elite_elite_age != update & found_solution == "1")
+  )
+# print(solution_counts, n=208)
+solution_table <- kable(solution_counts) %>%
+  kable_styling(latex_options = "striped", font_size = 25)
+save_kable(solution_table, paste0(plot_directory, "solution_counts_table.pdf"))
+solution_table
+```
+
+
+### Success rates across injection intervals
+
+```{r}
+plot <- solution_counts %>%
+  ggplot(
+    aes(
+      x = inject_cond,
+      y = solution_count,
+      fill = ORG_INJECTION_INTERVAL,
+      pattern_angle = inject_cond
+    )
+  ) +
+  geom_col_pattern(
+    position = "dodge",
+    pattern = "stripe",
+    pattern_color = "gray",
+    pattern_fill = "gray",
+    pattern_spacing = 0.03,
+    pattern_density = 0.05,
+    # position = position_dodge(width = 0.4)
+  ) +
+  geom_text(
+    aes(y = -0.7, label = solution_count),
+    position = position_dodge(width=0.9)
+  ) +
+  scale_fill_bright() +
+  scale_color_bright() +
+  scale_x_discrete(
+    name = "Inject condition"
+  ) +
+  scale_y_continuous(
+    "Solution count"
+  ) +
+  facet_grid(
+    PROBLEM ~ AGE_LEX_AGE_ORDER_LIMIT
+  ) +
+  theme(
+      legend.position = "right",
+      axis.text.x = element_text(
+        angle = 30,
+        hjust = 1
+      ),
+      panel.border = element_rect(color = "gray", size = 2)
+    )
+ggsave(
+  filename = paste0(plot_directory, "solutions-bar.pdf"),
+  plot = plot,
+  width = 10,
+  height = 15
+)
+plot
+```
+
+## Interval 100 with age order limit 10
+
+### Problem-solving success
+
+```{r}
+plot <- solution_counts %>%
+  filter(ORG_INJECTION_INTERVAL == "100" & AGE_LEX_AGE_ORDER_LIMIT == "10") %>%
+  ggplot(
+    aes(
+      x = inject_cond,
+      y = solution_count,
+      fill = inject_cond
+    )
+  ) +
+  geom_col() +
+  geom_text(
+    aes(y = -0.7, label = solution_count),
+    position = position_dodge(width=0.9)
+  ) +
+  scale_fill_bright() +
+  scale_color_bright() +
+  scale_x_discrete(
+    name = "Inject condition",
+    limits = c("age-lex_inj-rand", "lex_inj-rand", "lex_inj-none"),
+    labels = c("Random inj.\nAge sel.", "Random inj.\nNo Age", "Standard\nLex.")
+  ) +
+  scale_y_continuous(
+    "Solution count"
+  ) +
+  facet_wrap(
+    ~ PROBLEM,
+    nrow = 1
+  ) +
+  theme(
+      legend.position = "none",
+      # axis.text.x = element_text(
+      #   angle = 30,
+      #   hjust = 1
+      # ),
+      panel.border = element_rect(color = "gray", size = 2)
+    )
+ggsave(
+  filename = paste0(plot_directory, "solutions-bar-i100-ol10.pdf"),
+  plot = plot,
+  width = 18,
+  height = 8
+)
+plot
+```
+
+### Proportion of solutions that descend from injected programs
+
+```{r}
+plot <- solution_counts %>%
+  filter(ORG_INJECTION_INTERVAL == "100" & AGE_LEX_AGE_ORDER_LIMIT == "10") %>%
+  ggplot(
+    aes(
+      x = inject_cond,
+      # y = solution_count,
+      y = sol_from_injected,
+      fill = inject_cond
+    )
+  ) +
+  geom_col(aes(y = solution_count), fill = "grey", alpha = 0.8) +
+  geom_col() +
+  geom_text(
+    aes(y = -0.7, label = paste0(sol_from_injected, "/", solution_count)),
+    position = position_dodge(width=0.9)
+  ) +
+  scale_fill_bright() +
+  scale_color_bright() +
+  scale_x_discrete(
+    name = "Inject condition",
+    limits = c("age-lex_inj-rand", "lex_inj-rand", "lex_inj-none"),
+    labels = c("Random inj.\nAge sel.", "Random inj.\nNo Age", "Standard\nLex.")
+  ) +
+  scale_y_continuous(
+    "Solution count"
+  ) +
+  facet_wrap(
+    ~ PROBLEM,
+    nrow = 1
+  ) +
+  theme(
+      legend.position = "none",
+      # axis.text.x = element_text(
+      #   angle = 30,
+      #   hjust = 1
+      # ),
+      panel.border = element_rect(color = "gray", size = 2)
+    )
+ggsave(
+  filename = paste0(plot_directory, "solutions-bar-i100-ol10-prop-descend.pdf"),
+  plot = plot,
+  width = 18,
+  height = 8
+)
+plot
+```
+
+#### Statistics
+
+```{r}
+sol_stats_data <- solution_counts %>%
+  ungroup() %>%
+  select(
+    PROBLEM,
+    ORG_INJECTION_INTERVAL,
+    AGE_LEX_AGE_ORDER_LIMIT,
+    inject_cond,
+    solution_count,
+    no_solution_count
+  )
+
+fisher_results <- data.frame(
+  comparison = character(),
+  group1 = character(),
+  group2 = character(),
+  n = integer(),
+  p = double(),
+  p.adj = double(),
+  p.adj.signif = character()
+)
+
+
+# ORG_INJECTION_INTERVAL
+# AGE_LEX_AGE_ORDER_LIMIT
+inj_intervals <- levels(sol_stats_data$ORG_INJECTION_INTERVAL)
+age_limits <- levels(sol_stats_data$AGE_LEX_AGE_ORDER_LIMIT)
+problems <- levels(sol_stats_data$PROBLEM)
+
+for (inj_interval in inj_intervals) {
+  for (age_limit in age_limits) {
+    for (problem in problems) {
+      ft_results <- sol_stats_data %>%
+        filter(
+          PROBLEM == problem & AGE_LEX_AGE_ORDER_LIMIT == age_limit & ORG_INJECTION_INTERVAL == inj_interval
+        ) %>%
+        select(inject_cond, solution_count, no_solution_count) %>%
+        column_to_rownames(var = "inject_cond") %>%
+        pairwise_fisher_test(
+          p.adjust.method = "holm"
+        ) %>%
+        add_significance("p.adj")
+
+      ft_results <- ft_results %>%
+        mutate(
+          problem = rep(problem, nrow(ft_results)),
+          inj_interval = rep(inj_interval, nrow(ft_results)),
+          age_limit = rep(age_limit, nrow(ft_results)),
+          .keep = "all"
+        ) %>%
+        relocate(problem, inj_interval, age_limit)
+
+      fisher_results <- rbind(
+        fisher_results,
+        ft_results
+      )
+    }
+  }
+}
+
+  # ft_results <- sol_stats_data %>%
+  #   filter(PROBLEM == problem) %>%
+  #   select(!PROBLEM) %>%
+  #   column_to_rownames(var = "ORG_INJECTION_MODE") %>%
+  #   pairwise_fisher_test(
+  #     p.adjust.method = "holm"
+  #   ) %>%
+  #   add_significance("p.adj")
+
+
+# }
+fisher_results <- as.tibble(fisher_results)
+fisher_results <- fisher_results %>%
+  mutate(
+    # comparison = as.factor(comparison),
+    problem = as.factor(problem),
+    inj_interval = as.factor(inj_interval),
+    age_limit = as.factor(age_limit),
+    group1 = as.factor(group1),
+    group2 = as.factor(group2),
+  ) %>%
+  group_by(
+    problem
+  )
+
+fisher_table <- kbl(fisher_results) %>% kable_styling()
+save_kable(fisher_table, paste0(plot_directory, "stats_table.pdf"))
+fisher_table
+```
