@@ -330,17 +330,6 @@ for (inj_interval in inj_intervals) {
   }
 }
 
-  # ft_results <- sol_stats_data %>%
-  #   filter(PROBLEM == problem) %>%
-  #   select(!PROBLEM) %>%
-  #   column_to_rownames(var = "ORG_INJECTION_MODE") %>%
-  #   pairwise_fisher_test(
-  #     p.adjust.method = "holm"
-  #   ) %>%
-  #   add_significance("p.adj")
-
-
-# }
 fisher_results <- as.tibble(fisher_results)
 fisher_results <- fisher_results %>%
   mutate(
