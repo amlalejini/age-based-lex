@@ -1,6 +1,7 @@
 # Using lineage age to augment search space exploration in lexicase selection
 
-<!-- TODO: add badges -->
+[![supplemental](https://img.shields.io/badge/go%20to-supplemental%20material-ff69b4)](https://lalejini.com/age-based-lex/bookdown/supp/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12751839.svg)](https://doi.org/10.5281/zenodo.12751839)
 
 ## Overview
 
