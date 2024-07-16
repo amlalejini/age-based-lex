@@ -1,22 +1,18 @@
-# Phylogeny-informed subsampling
+# Using lineage age to augment search space exploration in lexicase selection
 
-[![supplemental](https://img.shields.io/badge/go%20to-supplemental%20material-ff69b4)](https://lalejini.com/GECCO-2024-phylogeny-informed-subsampling/bookdown/book/)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10576330.svg)](https://doi.org/10.5281/zenodo.10576330)
-[![OSF](https://img.shields.io/badge/data%20%40%20OSF-10.17605%2FOSF.IO%2FH3F52-blue)](https://osf.io/h3f52/)
+<!-- TODO: add badges -->
 
 ## Overview
 
 ### Abstract
 
-> Phylogenies (ancestry trees) tell the evolutionary history of an evolving population.
-  In evolutionary computing, phylogenies reveal how evolutionary algorithms steer populations through a search space by illuminating the step-by-step evolution of solutions.
-  To date, phylogenetic analyses have almost exclusively been applied in post-hoc analyses of evolutionary algorithms for performance tuning and research.
-  Here, we apply phylogenetic information at runtime to augment parent selection procedures that use training sets to assess candidate solution quality.
-  We propose phylogeny-informed fitness estimation, thinning a fraction of costly training case evaluations by substituting the fitness profiles of near relatives as a heuristic estimate.
-  We evaluate phylogeny-informed fitness estimation in the context of the down-sampled lexicase and cohort lexicase selection algorithms on two diagnostic analyses and four genetic programming (GP) problems.
-  Our results indicate that phylogeny-informed fitness estimation can mitigate the drawbacks of down-sampled lexicase, improving diversity maintenance and search space exploration.
-  However, the extent to which phylogeny-informed fitness estimation improves problem-solving success for GP varies by problem, subsampling method, and subsampling level.
-  This work serves as an initial step toward improving evolutionary algorithms by exploiting runtime phylogenetic analysis.
+> Evolutionary algorithms often become stuck on a particular evolutionary trajectory, limiting the available outcomes and often excluding global optima.
+Indeed, the starting state of a population (or early decisions) may limit the regions of search space that the algorithm will ultimately explore.
+One mechanism used to ensure that more regions of a search space are considered is to regularly inject new random starting points, while giving special advantages to younger lineages to give them a chance to survive long enough to realize their potential.
+In this chapter, we explore including periodic injections of random solutions into lexicase selection, along with age-based selection criteria.
+We demonstrate this technique's potential for increased exploration using both program synthesis benchmark problems and construction of Sudoku boards with particular solving characteristics.
+Our results are promising, but inconsistent, ranging from highly effective to no meaningful difference from controls.
+Ultimately we provide directions for future research that might more fully realize the power of age-based criteria in lexicase selection.
 
 ## Repository guide
 
