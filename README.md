@@ -2,6 +2,8 @@
 
 [![supplemental](https://img.shields.io/badge/go%20to-supplemental%20material-ff69b4)](https://lalejini.com/age-based-lex/bookdown/supp/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12751839.svg)](https://doi.org/10.5281/zenodo.12751839)
+[![OSF](https://img.shields.io/badge/data%20%40%20OSF-10.17605%2FOSF.IO%2FEFB4J-blue)](https://osf.io/efb4j/)
+
 
 ## Overview
 
