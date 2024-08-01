@@ -5,6 +5,7 @@ language:
 delete_merged_file: true
 rmd_files: ["index.Rmd",
             "../docs/gp-instruction-set.md",
+            "../docs/data.md",
             "../experiments/2024-05-20-inj-int/analysis/2024-05-20.Rmd",
             "tail.Rmd"
            ]

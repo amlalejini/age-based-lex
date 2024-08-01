@@ -98,7 +98,7 @@
 
 \title{Supplemental Material for `Using lineage age to augment search space exploration in lexicase selection'}
 \author{Karen Suzue, Charles Ofria, and Alexander Lalejini}
-\date{2024-07-16}
+\date{2024-08-01}
 
 \begin{document}
 \maketitle
@@ -126,6 +126,8 @@ Our supplemental material includes the following:
 \tightlist
 \item
   GP instruction set (Section \ref{signalgp-instruction-set})
+\item
+  Experiment data availability (Section \ref{data-availability})
 \item
   GP data analysis + statistics (Section \ref{program-synthesis-experiments})
 \end{itemize}
@@ -317,6 +319,19 @@ Each problem has problem-specific instructions for producing output.
   SubmitOutput
 \end{itemize}
 
+\hypertarget{data-availability}{%
+\chapter{Data availability}\label{data-availability}}
+
+\hypertarget{source-code}{%
+\section{Source code}\label{source-code}}
+
+Source code for this work can be accessed on GitHub: \url{https://github.com/amlalejini/age-based-lex}.
+
+\hypertarget{experimental-results}{%
+\section{Experimental results}\label{experimental-results}}
+
+Data generated from our experiments used in analyses are available online, archived in an OSF repository: \url{https://osf.io/efb4j/}.
+
 \hypertarget{program-synthesis-experiments}{%
 \chapter{Program synthesis experiments}\label{program-synthesis-experiments}}
 
@@ -357,13 +372,13 @@ library(tidyverse)
 \end{lstlisting}
 
 \begin{lstlisting}
-## -- Attaching core tidyverse packages -------------------------------------------------------------------------------------------------------------------------------------------------- tidyverse 2.0.0 --
+## -- Attaching core tidyverse packages ------------------------------------------------------------------------------------------------------------------------------------------------------------------ tidyverse 2.0.0 --
 ## v dplyr     1.1.4     v readr     2.1.4
 ## v forcats   1.0.0     v stringr   1.5.1
 ## v ggplot2   3.5.1     v tibble    3.2.1
 ## v lubridate 1.9.3     v tidyr     1.3.0
 ## v purrr     1.0.2     
-## -- Conflicts -------------------------------------------------------------------------------------------------------------------------------------------------------------------- tidyverse_conflicts() --
+## -- Conflicts ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ tidyverse_conflicts() --
 ## x dplyr::filter() masks stats::filter()
 ## x dplyr::lag()    masks stats::lag()
 ## i Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
@@ -463,7 +478,7 @@ summary_data <- read_csv(summary_data_loc)
 
 \begin{lstlisting}
 ## Rows: 2700 Columns: 61
-## -- Column specification ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## -- Column specification --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## Delimiter: ","
 ## chr (11): ANCESTOR_FILE_PATH, EVAL_MODE, ORG_INJECTION_MODE, POP_INIT_MODE, ...
 ## dbl (50): AGE_LEX_AGE_ORDER_LIMIT, EVAL_CPU_CYCLES_PER_TEST, MAX_ACTIVE_THRE...
@@ -509,7 +524,8 @@ summary_data <- summary_data %>%
         "lex_inj-rand",
         "lex_inj-none"
       )
-    )
+    ),
+    sol_descends_injected = elite_elite_age != update & found_solution == "1"
   )
 
 solution_counts <- summary_data %>%
@@ -532,8 +548,9 @@ solution_counts <- summary_data %>%
 \end{lstlisting}
 
 \begin{lstlisting}
-## `summarise()` has grouped output by 'PROBLEM', 'SELECTION', 'AGE_LEX_AGE_ORDER_LIMIT', 'ORG_INJECTION_COUNT', 'ORG_INJECTION_MODE', 'ORG_INJECTION_INTERVAL'. You can override using the `.groups`
-## argument.
+## `summarise()` has grouped output by 'PROBLEM', 'SELECTION',
+## 'AGE_LEX_AGE_ORDER_LIMIT', 'ORG_INJECTION_COUNT', 'ORG_INJECTION_MODE',
+## 'ORG_INJECTION_INTERVAL'. You can override using the `.groups` argument.
 \end{lstlisting}
 
 \begin{lstlisting}[language=R]
@@ -827,7 +844,7 @@ plot <- solution_counts %>%
   scale_x_discrete(
     name = "Inject condition",
     limits = c("age-lex_inj-rand", "lex_inj-rand", "lex_inj-none"),
-    labels = c("Random inj.\nAge sel.", "Random inj.\nNo Age", "Standard\nLex.")
+    labels = c("Inject\nAge el.", "Inject\nNo Age", "Standard\nLex.")
   ) +
   scale_y_continuous(
     "Solution count"
@@ -838,6 +855,15 @@ plot <- solution_counts %>%
   ) +
   theme(
       legend.position = "none",
+      axis.text = element_text(
+        size = 18
+      ),
+      axis.title = element_text(
+        size = 18
+      ),
+      strip.text = element_text(
+        size = 18
+      ),
       # axis.text.x = element_text(
       #   angle = 30,
       #   hjust = 1
@@ -854,59 +880,6 @@ plot
 \end{lstlisting}
 
 \includegraphics{age-based-lex-supplemental_files/figure-latex/unnamed-chunk-8-1.pdf}
-
-\hypertarget{proportion-of-solutions-that-descend-from-injected-programs}{%
-\subsection{Proportion of solutions that descend from injected programs}\label{proportion-of-solutions-that-descend-from-injected-programs}}
-
-\begin{lstlisting}[language=R]
-plot <- solution_counts %>%
-  filter(ORG_INJECTION_INTERVAL == "100" & AGE_LEX_AGE_ORDER_LIMIT == "10") %>%
-  ggplot(
-    aes(
-      x = inject_cond,
-      # y = solution_count,
-      y = sol_from_injected,
-      fill = inject_cond
-    )
-  ) +
-  geom_col(aes(y = solution_count), fill = "grey", alpha = 0.8) +
-  geom_col() +
-  geom_text(
-    aes(y = -0.7, label = paste0(sol_from_injected, "/", solution_count)),
-    position = position_dodge(width=0.9)
-  ) +
-  scale_fill_bright() +
-  scale_color_bright() +
-  scale_x_discrete(
-    name = "Inject condition",
-    limits = c("age-lex_inj-rand", "lex_inj-rand", "lex_inj-none"),
-    labels = c("Random inj.\nAge sel.", "Random inj.\nNo Age", "Standard\nLex.")
-  ) +
-  scale_y_continuous(
-    "Solution count"
-  ) +
-  facet_wrap(
-    ~ PROBLEM,
-    nrow = 1
-  ) +
-  theme(
-      legend.position = "none",
-      # axis.text.x = element_text(
-      #   angle = 30,
-      #   hjust = 1
-      # ),
-      panel.border = element_rect(color = "gray", size = 2)
-    )
-ggsave(
-  filename = paste0(plot_directory, "solutions-bar-i100-ol10-prop-descend.pdf"),
-  plot = plot,
-  width = 18,
-  height = 8
-)
-plot
-\end{lstlisting}
-
-\includegraphics{age-based-lex-supplemental_files/figure-latex/unnamed-chunk-9-1.pdf}
 
 \hypertarget{statistics}{%
 \subsubsection{Statistics}\label{statistics}}
@@ -1189,6 +1162,131 @@ snow-day & 1000 & 20 & lex\_inj-none & lex\_inj-rand & 60 & 4.92e-01 & 1.00e+00 
 \hline
 \end{tabular}
 \end{table}
+
+\hypertarget{proportion-of-solutions-that-descend-from-injected-programs}{%
+\subsection{Proportion of solutions that descend from injected programs}\label{proportion-of-solutions-that-descend-from-injected-programs}}
+
+\begin{lstlisting}[language=R]
+plot <- solution_counts %>%
+  filter(ORG_INJECTION_INTERVAL == "100" & AGE_LEX_AGE_ORDER_LIMIT == "10") %>%
+  ggplot(
+    aes(
+      x = inject_cond,
+      # y = solution_count,
+      y = sol_from_injected,
+      fill = inject_cond
+    )
+  ) +
+  geom_col(aes(y = solution_count), fill = "grey", alpha = 0.8) +
+  geom_col() +
+  geom_text(
+    aes(y = -0.7, label = paste0(sol_from_injected, "/", solution_count)),
+    position = position_dodge(width=0.9)
+  ) +
+  scale_fill_bright() +
+  scale_color_bright() +
+  scale_x_discrete(
+    name = "Inject condition",
+    limits = c("age-lex_inj-rand", "lex_inj-rand", "lex_inj-none"),
+    labels = c("Inject\nAge Sel.", "Inject\nNo Age", "Standard\nLex.")
+  ) +
+  scale_y_continuous(
+    "Solution count"
+  ) +
+  facet_wrap(
+    ~ PROBLEM,
+    nrow = 1
+  ) +
+  theme(
+      legend.position = "none",
+      axis.text = element_text(
+        size = 18
+      ),
+      axis.title = element_text(
+        size = 18
+      ),
+      strip.text = element_text(
+        size = 18
+      ),
+      panel.border = element_rect(color = "gray", size = 2)
+    )
+ggsave(
+  filename = paste0(plot_directory, "solutions-bar-i100-ol10-prop-descend.pdf"),
+  plot = plot,
+  width = 18,
+  height = 8
+)
+plot
+\end{lstlisting}
+
+\includegraphics{age-based-lex-supplemental_files/figure-latex/unnamed-chunk-10-1.pdf}
+
+\hypertarget{lineage-age-distributions}{%
+\subsection{Lineage age distributions}\label{lineage-age-distributions}}
+
+Distributions of lineage age for solutions that descended from injected programs
+
+\begin{lstlisting}[language=R]
+plot <- summary_data %>%
+  filter(
+    inject_cond == "age-lex_inj-rand" & ORG_INJECTION_INTERVAL == "100" &
+    AGE_LEX_AGE_ORDER_LIMIT == "10" & PROBLEM %in% c("gcd", "grade") &
+    sol_descends_injected
+  ) %>%
+  ggplot(
+    aes(
+      x = PROBLEM,
+      # y = elite_elite_age,
+      y = elite_elite_age / update,
+      fill = PROBLEM
+    )
+  ) +
+  # geom_flat_violin(
+  #   position = position_nudge(x = .2, y = 0),
+  #   alpha = .8,
+  #   adjust = 1.5
+  # ) +
+  geom_point(
+    mapping = aes(color = PROBLEM),
+    position = position_jitter(width = .2),
+    size = .5,
+    alpha = 0.8
+  ) +
+  geom_boxplot(
+    width = .2,
+    outlier.shape = NA,
+    alpha = 0.5
+  ) +
+  scale_y_continuous(
+    name = "Elite age (as % of elapsed generations)"
+  ) +
+  scale_x_discrete(
+    name = "Problem"
+  ) +
+  scale_fill_dark() +
+  scale_color_dark() +
+  # facet_wrap(
+  #   ~PROBLEM,
+  #   nrow = 1
+  #   # ncol = 1
+  # ) +
+  # coord_flip() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(
+      angle = 30,
+      hjust = 1
+    ),
+    panel.border = element_rect(color = "gray", size = 2)
+  )
+ggsave(
+  filename = paste0(plot_directory, "elite-age-prop.pdf"),
+  plot = plot,
+  width = 6,
+  height = 4
+)
+\end{lstlisting}
+
 
   \bibliography{packages.bib,supplemental.bib}
 
