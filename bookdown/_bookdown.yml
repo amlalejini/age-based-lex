@@ -7,5 +7,7 @@ rmd_files: ["index.Rmd",
             "../docs/gp-instruction-set.md",
             "../docs/data.md",
             "../experiments/2024-05-20-inj-int/analysis/2024-05-20.Rmd",
+            "../docs/diagnostics-config.Rmd",
+            "../experiments/2024-07-06-diagnostics/analysis/2024-07-06.Rmd",
             "tail.Rmd"
            ]
