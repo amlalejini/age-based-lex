@@ -37,7 +37,7 @@ stable and perform no worse than control in terms of collective fitness. Meanwhi
 slightly before degrading with each subsequent injection. The lack of effect at a population size of 500 might be due to the higher threshold that 
 lineages must fulfill by occupying niches. Without selecting for age, new injects are unlikely to perform well enough on specific subsets of the 
 problem, leading to their swift extinction. Meanwhile, the higher population size of 1,000, which results in a lower threshold, makes it more likely 
-for new lineages to survive long enough to establish new niches and affect the overall fitness of the population.
+for new lineages to survive long enough to affect the overall fitness of the population.
 
 While a lower threshold may prolong the survival of new injects, it is still unclear why degradation would occur without an age test case. 
 Without selecting for age, it is unlikely for new lineages to be competitive against established specialists, particularly within their respective 
@@ -54,7 +54,7 @@ the lowest active position initially decreases but then rises above the "baselin
 the lowest active position rises much higher (beyond 20) for a population size of 500, but remains around 6 for a population size of 1,000. 
 Following the observations from collective fitness, we see that while the lowest active positions decrease due to increased diversity, we are 
 simultaneously losing older lineages in the process. However, the loss of older lineages alone doesn't explain the rise above baseline, as this 
-should not visibly affect the lower active positions if they are primarily driven by the new lineages. This rise might indicate that the new 
+should not visibly affect the lowest active positions if they are primarily driven by the new lineages. This rise might indicate that the new 
 lineages are not performing well enough on the problem to survive long-term. Combined with the loss of older lineages, this could result in the 
 lowest active positions being much higher than the baseline.
 
@@ -66,4 +66,21 @@ Random injections with an age case briefly lower maximum fitness, though the eff
 size of 1,000. No effect is observed for runs with random injections that do not include an age case.
 
 ## Exploit
-We anticipated age-based diversity to not be helpful in this diagnostic, but it seems to perform no worse than control. 
+WWe expected age-based diversity to be unhelpful in this diagnostic, but its performance is on par with the control in terms of both collective 
+and maximum fitness.
+
+The trends in collective fitness and the lowest active position seem to mirror each other. Initially, collective fitness is higher due to a more 
+varied population. However, one genotype eventually dominates around the 25,000-generation mark, causing collective fitness to plateau. Random 
+injections with an age test case briefly reintroduce some diversity, but the dominant lineage eventually takes over again.
+
+Similarly, many individuals coexist early on, each focusing on different subsets of traits. By chance, some individuals have their maximal trait 
+near the beginning of their genotype, leading to a lower lowest active position. Over time, one genotype dominates and 
+outcompetes the rest. Since the position of the maximal trait is random, it averages around 50. Selecting for age temporarily decreases this 
+value, but it rises again as new injects are overtaken by the dominant lineage.
+
+As in the diversity diagnostic, there’s no inherent reason for the maximal value to be at any specific position in the genotype.
+
+## Explore
+Random injections with age selection seem to perform slightly better in terms of lowering the active position, but more work is needed to 
+determine whether this improvement is significant. Age-based diversity also appears to slightly reduce maximum fitness, particularly in a 
+smaller population of 500.
