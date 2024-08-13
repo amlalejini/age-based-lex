@@ -1,22 +1,5 @@
 # Diagnostics experiments
 
-```{r}
-experiment_slug <- "2024-07-06-diagnostics"
-
-working_directory <- paste0(
-  "experiments/",
-  experiment_slug,
-  "/analysis/"
-)
-
-if (exists("bookdown_wd_prefix")) {
-  working_directory <- paste0(
-    bookdown_wd_prefix,
-    working_directory
-  )
-}
-```
-
 ## Diversity 
 
 ### Collective Fitness
@@ -28,7 +11,8 @@ gaining temporary diversity but also losing older lineages that specialize in ce
 
 Previous work by Dolson et al. shows that, under lexicase selection, lineages must occupy at least a minimal proportion of niches to avoid extinction, 
 with this threshold decreasing as the population grows [CITE]. Our current configuration, which strongly selects for younger lineages by ensuring 
-the age case appears early in a selection event, may be reducing the number of niches that older lineages could specialize in.
+the age case appears early in a selection event, may be reducing the number of niches that older lineages could specialize in. Given the importance of
+occupying niches for long-term survival, this further increases the likelihood of extinction for older lineages. 
 
 Interestingly, random injections without age selection may degrade population-wide performance at higher population sizes. This effect becomes more 
 prominent with larger injection sizes and occurs regardless of whether we are introducing a bottleneck event, that is, replacing a portion of the 
@@ -49,16 +33,18 @@ or other factors, ultimately resulting in the degradation of collective fitness 
 ### Lowest Active Position
 There are no selective pressures for the lowest active position in the diversity diagnostic.
 
-Mirroring the results for collective fitness, injections with an age case lead to oscillations in the lowest active position. With every injection, 
-the lowest active position initially decreases but then rises above the "baseline" after approximately 25,000 generations. Interestingly, 
-the lowest active position rises much higher (beyond 20) for a population size of 500, but remains around 6 for a population size of 1,000. 
+Mirroring the results for collective fitness, injections with an age case lead to oscillations in the lowest active position. With each injection, 
+the lowest active position decreases before generally rising above the control runs after approximately 25,000 generations. 
+Interestingly, the lowest active position rises much higher (beyond 20) for a population size of 500, but rises to about 6 for a population size 
+of 1,000, regardless of cardinality.
+
 Following the observations from collective fitness, we see that while the lowest active positions decrease due to increased diversity, we are 
-simultaneously losing older lineages in the process. However, the loss of older lineages alone doesn't explain the rise above baseline, as this 
+simultaneously losing older lineages in the process. However, the loss of older lineages alone doesn't explain the frequent rise above the "baselines", as this 
 should not visibly affect the lowest active positions if they are primarily driven by the new lineages. This rise might indicate that the new 
 lineages are not performing well enough on the problem to survive long-term. Combined with the loss of older lineages, this could result in the 
 lowest active positions being much higher than the baseline.
 
-Meanwhile, injections without an age case at a lower population size of 500 seem to have no effect on the lowest active position. 
+Injections without an age case at a lower population size of 500 seem to have no effect on the lowest active position. 
 However, at a population size of 1,000, injections do impact the lowest active position of the population.
 
 ### Maximum Fitness
@@ -66,11 +52,11 @@ Random injections with an age case briefly lower maximum fitness, though the eff
 size of 1,000. No effect is observed for runs with random injections that do not include an age case.
 
 ## Exploit
-WWe expected age-based diversity to be unhelpful in this diagnostic, but its performance is on par with the control in terms of both collective 
+We expected age-based diversity to be unhelpful in this diagnostic, but its performance is on par with the control in terms of both collective 
 and maximum fitness.
 
 The trends in collective fitness and the lowest active position seem to mirror each other. Initially, collective fitness is higher due to a more 
-varied population. However, one genotype eventually dominates around the 25,000-generation mark, causing collective fitness to plateau. Random 
+varied population. However, one or a few genotypes eventually dominates around the 25,000-generation mark, causing collective fitness to plateau. Random 
 injections with an age test case briefly reintroduce some diversity, but the dominant lineage eventually takes over again.
 
 Similarly, many individuals coexist early on, each focusing on different subsets of traits. By chance, some individuals have their maximal trait 
@@ -82,5 +68,113 @@ As in the diversity diagnostic, there’s no inherent reason for the maximal val
 
 ## Explore
 Random injections with age selection seem to perform slightly better in terms of lowering the active position, but more work is needed to 
-determine whether this improvement is significant. Age-based diversity also appears to slightly reduce maximum fitness, particularly in a 
+determine whether this improvement is significant. Age-based diversity also appears to slightly reduce or hinder maximum fitness, particularly in a 
 smaller population of 500.
+
+## Setup
+
+### Dependencies
+```{r}
+library(ggplot2)
+library(dplyr)
+library(rlang)
+```
+
+### Set working directory
+```{r}
+experiment_slug <- "2024-07-06-diagnostics"
+
+working_directory <- paste0(
+  "experiments/",
+  experiment_slug,
+  "/analysis/"
+)
+
+if (exists("bookdown_wd_prefix")) {
+  working_directory <- paste0(
+    bookdown_wd_prefix,
+    working_directory
+  )
+}
+
+data_directory <- paste0(working_directory, "data/")
+average_directory <- paste0(data_directory, "average/")
+```
+
+### Plot averages
+Due to the large number of plots, they cannot be displayed directly. However, they can be viewed in the average directory.
+ 
+```{r}
+generate_plot <- function(file_name, metric_name) {
+  print(paste("Processing file:", file_name, "with metric:", metric_name))
+  og_data <- read.csv(file_name, header=TRUE)
+  
+  # Making sure file_name is basename, remove extension: "diversity_200_500_100"
+  file_base <- tools::file_path_sans_ext(basename(file_name))
+  # Extract parameters from file_name: ["diversity", "200", "500", "100"]
+  file_parts <- strsplit(file_base, "_")[[1]]
+  type <- file_parts[1]
+  num_vals <- file_parts[2]
+  pop_size <- file_parts[3]
+  inject_count <- file_parts[4]
+
+  column_name <- ""
+  if (metric_name == "Lowest Active Position") {
+    column_name <- "Lowest.Active.Pos"
+  }
+  else if (metric_name == "Maximum Fitness") {
+    column_name <- "Maximum.Fitness"
+  }
+  else if (metric_name == "Collective Fitness") {
+    column_name <- "Collective.Fitness"
+  }
+  else {
+    column_name <- metric_name
+  }
+  
+  # Make sure the necessary columns exist
+  required_columns <- c("X", "Type", column_name)
+  if (!all(required_columns %in% colnames(og_data))) {
+    stop(paste("One or more required columns are missing in the file:", file_name))
+  }
+  
+  # Identify extra headers
+  extra_header_rows <- which(grepl("Average Fitness", og_data$Average.Fitness))
+  # Remove all extra headers
+  clean_data <- og_data[-extra_header_rows, ]
+
+  # Convert target column to numeric
+  clean_data[[column_name]] <- as.numeric(clean_data[[column_name]])
+  
+  
+  plot <- ggplot(clean_data, aes(x = X, y = !!sym(column_name), group = Type, color = Type)) +
+    geom_line() +
+    labs(
+      title = paste("Averaged", metric_name, "Over Time"),
+      subtitle = paste0("Experiment '", type, "', Cardinality ", num_vals, ", Pop. Size ", pop_size, ", Inject Size ", inject_count),
+      x = "Generations (x1000)",
+      y = metric_name
+    )+
+    theme_minimal()
+  
+  # Save the plot
+  metric_name_file <- gsub(" ", "_", metric_name)
+  
+  output_filename <- paste0(tools::file_path_sans_ext(file_name), "_", metric_name_file, "_plot.png")
+  ggsave(output_filename, plot=plot, width=10, height=6, bg="white")
+}
+
+metrics <- c("Maximum Fitness", "Collective Fitness", "Lowest Active Position")
+all_files <- list.files(path=average_directory, pattern="*.csv")
+
+# Exclude files starting with "C"
+all_files <- all_files[!grepl("^C", all_files)]
+print(all_files)
+
+for (file in all_files) {
+  for (metric in metrics) {
+    file_path <- paste0(average_directory, file)
+    generate_plot(file_path, metric)
+  }
+}
+```
