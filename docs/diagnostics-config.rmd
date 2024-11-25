@@ -1,0 +1,185 @@
+# Diagnostics configuration
+
+In addition to the GP and Sudoku experiments, we tested age-based lexicase against the exploration, exploitation, and diversity diagnostic 
+fitness landscapes included in the MABE 2.0 software framework. With the exception of the diversity diagnostic, both exploration and exploitation 
+are detailed in Hernandez et al. (2018) [@hernandez2023]. The diversity diagnostic is similar to the "Contradictory Objectives" test in the paper but 
+translates the inactive genes to the phenotype by subtracting them from the active (maximal) trait and then halving that value. 
+This creates pressure to maximize one trait while minimizing the rest. In accordance with Hernandez et al., we used a genotype representation 
+consisting of a sequence of floating-point values.
+
+We measured:
+- The **maximum fitness** attained in the population
+- The sum of the highest values for each trait across the population (**collective fitness**)
+- The current lowest position of maximal trait in the population (**lowest "active" position**)
+
+Below, we document the configurations used for these experiments.
+
+## MABE configuration files
+
+```{r}
+experiment_slug <- "2024-07-06-diagnostics"
+
+config_directory <- paste0(
+  "experiments/",
+  experiment_slug,
+  "/hpc/",
+  "/config/"
+)
+
+if (exists("bookdown_wd_prefix")) {
+  config_directory <- paste0(
+    bookdown_wd_prefix,
+    config_directory
+  )
+}
+```
+
+### Standard Lexicase
+```{r comment=''}
+file <- paste0(config_directory, "/AgeControl-No-Inject.mabe")
+file_content <- readLines(file)
+cat(file_content, sep='\n')
+```
+
+### Standard Lexicase with Random Injection
+```{r comment=''}
+file <- paste0(config_directory, "/AgeControl.mabe")
+file_content <- readLines(file)
+cat(file_content, sep='\n')
+```
+
+### Standard Lexicase with Random Injection and No Replacement
+```{r comment=''}
+file <- paste0(config_directory, "/AgeControl-No-Replace.mabe")
+file_content <- readLines(file)
+cat(file_content, sep='\n')
+```
+
+### Age-Based Lexicase
+```{r comment=''}
+file <- paste0(config_directory, "/AgeDiagnostics.mabe")
+file_content <- readLines(file)
+cat(file_content, sep='\n')
+```
+
+### Age-Based Lexicase with No Replacement
+```{r comment=''}
+file <- paste0(config_directory, "/AgeDiagnostics-No-Replace.mabe")
+file_content <- readLines(file)
+cat(file_content, sep='\n')
+```
+
+
+## Experiment conditions
+We varied the cardinality (the number of values for a genotype, or "num_vals"), population size, and inject count, 
+while keeping the number of generations and injection interval consistent throughout the experiments.
+
+We conducted exploit experiments exclusively for AgeControl.mabe (standard lexicase with random injection) and AgeDiagnostics.mabe (age-based lexicase).
+
+Each condition was tested with 20 replicates across all experiments.
+
+```
+fixed_parameters = {
+    "num_gens":"1000000",
+    "print_step":"1000",
+    "inject_step":"50000",
+    "elite_count":"0",
+}
+
+special_decorators = ["__DYNAMIC", "__COPY_OVER"]
+
+# Register parameters that vary across treatments/runs
+combos.register_var("filename")
+combos.register_var("diagnostic__COPY_OVER")
+combos.register_var("pop_inject_ratio__COPY_OVER")
+combos.register_var("num_vals__COPY_OVER")
+
+combos.add_val(
+    "filename",
+    [
+        "AgeControl.mabe",
+        "AgeDiagnostics.mabe"
+        "AgeControl-No-Inject.mabe",
+        "AgeControl-No-Replace.mabe",
+        "AgeDiagnostics-No-Replace.mabe"
+    ]
+)
+
+combos.add_val(
+    "diagnostic__COPY_OVER",
+    [
+        "-s diagnostics.diagnostic=\\\"explore\\\"",
+        "-s diagnostics.diagnostic=\\\"diversity\\\""
+    ]
+)
+
+combos.add_val(
+    "pop_inject_ratio__COPY_OVER",
+    [
+        "-s pop_size=500 -s inject_count=50",
+        "-s pop_size=1000 -s inject_count=100",
+        "-s pop_size=500 -s inject_count=100",
+        "-s pop_size=1000 -s inject_count=200",
+        "-s pop_size=500 -s inject_count=200",
+        "-s pop_size=1000 -s inject_count=400"
+    ]
+)
+combos.add_val(
+    "num_vals__COPY_OVER",
+    [
+        "-s num_vals=200",
+        "-s num_vals=500",        
+    ]
+)
+```
+
+```
+fixed_parameters = {
+    "num_gens":"100000",
+    "print_step":"1000",
+    "inject_step":"50000",
+    "elite_count":"0",
+}
+
+special_decorators = ["__DYNAMIC", "__COPY_OVER"]
+
+# Register parameters that vary across treatments/runs
+combos.register_var("filename")
+combos.register_var("diagnostic__COPY_OVER")
+combos.register_var("pop_inject_ratio__COPY_OVER")
+combos.register_var("num_vals__COPY_OVER")
+
+combos.add_val(
+    "filename",
+    [
+        "AgeControl.mabe",
+        "AgeDiagnostics.mabe"
+    ]
+)
+
+combos.add_val(
+    "diagnostic__COPY_OVER",
+    [
+        "-s diagnostics.diagnostic=\\\"exploit\\\"",
+    ]
+)
+
+combos.add_val(
+    "pop_inject_ratio__COPY_OVER",
+    [
+        "-s pop_size=500 -s inject_count=50",
+        "-s pop_size=1000 -s inject_count=100",
+        "-s pop_size=500 -s inject_count=100",
+        "-s pop_size=1000 -s inject_count=200",
+        "-s pop_size=500 -s inject_count=200",
+        "-s pop_size=1000 -s inject_count=400"
+    ]
+)
+combos.add_val(
+    "num_vals__COPY_OVER",
+    [
+        "-s num_vals=200",
+        "-s num_vals=500",        
+    ]
+)
+```

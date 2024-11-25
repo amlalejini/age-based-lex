@@ -2,6 +2,7 @@
 title: "Supplemental Material for 'Using lineage age to augment search space exploration in lexicase selection'"
 author: "Karen Suzue, Charles Ofria, and Alexander Lalejini"
 date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
 output: bookdown::gitbook
 documentclass: book
 bibliography: ["packages.bib", "supplemental.bib"]
@@ -37,6 +38,8 @@ Our supplemental material includes the following:
 - GP instruction set (Section \@ref(signalgp-instruction-set))
 - Experiment data availability (Section \@ref(data-availability))
 - GP data analysis + statistics (Section \@ref(program-synthesis-experiments))
+- Diagnostic fitness landscapes + MABE configuration (Section \@ref(diagnostics-configuration))
+- Diagnostics data analysis (Section \@ref(diagnostics-experiments))
 
 ## Contributing authors
 
