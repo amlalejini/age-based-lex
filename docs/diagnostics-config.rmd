@@ -2,7 +2,7 @@
 
 In addition to the GP and Sudoku experiments, we tested age-based lexicase against the exploration, exploitation, and diversity diagnostic 
 fitness landscapes included in the MABE 2.0 software framework. With the exception of the diversity diagnostic, both exploration and exploitation 
-are detailed in Hernandez et al. (2018) [CITE]. The diversity diagnostic is similar to the "Contradictory Objectives" test in the paper but 
+are detailed in Hernandez et al. (2018) [@hernandez2023]. The diversity diagnostic is similar to the "Contradictory Objectives" test in the paper but 
 translates the inactive genes to the phenotype by subtracting them from the active (maximal) trait and then halving that value. 
 This creates pressure to maximize one trait while minimizing the rest. In accordance with Hernandez et al., we used a genotype representation 
 consisting of a sequence of floating-point values.
