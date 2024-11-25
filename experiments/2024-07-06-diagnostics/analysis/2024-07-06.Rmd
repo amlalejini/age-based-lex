@@ -102,9 +102,9 @@ average_directory <- paste0(data_directory, "average/")
 ```
 
 ### Plot averages
-Due to the large number of plots, they cannot be displayed directly. However, they can be viewed in the average directory.
+Due to the large number of plots, they cannot be displayed directly. However, they can be generated using the code below:
  
-```{r}
+```{r, eval=FALSE}
 generate_plot <- function(file_name, metric_name) {
   print(paste("Processing file:", file_name, "with metric:", metric_name))
   og_data <- read.csv(file_name, header=TRUE)
